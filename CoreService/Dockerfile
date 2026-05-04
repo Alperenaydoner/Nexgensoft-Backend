@@ -1,5 +1,6 @@
-# CoreService — local / CI when build context is this folder only.
-# Render (repo root context): use Dockerfile at repository root.
+# Nexgensoft-Backend: proje bu klasörde (GitHub: …/CoreService/).
+# Render: Root Directory = CoreService, Dockerfile Path = Dockerfile (repo kökünde başka Dockerfile aratma).
+# Yerel: docker build -f Dockerfile .
 
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
