@@ -1,13 +1,19 @@
-# Nexgensoft-Backend: build context = repository root where CoreService.csproj lives
-# (no services/core-service/... path — that layout is for the full Nexgensoft monorepo only).
-# Monorepo local build: docker build -f services/core-service/CoreService/Dockerfile services/core-service/CoreService
+# Yalnızca build context = repo kökü (Render "Root Directory" BOŞ) iken.
+# GitHub yapın Nexgensoft-Backend/CoreService/ gibi ise Render'da Root Directory=CoreService
+# kullanın ve bu dosyayı DEĞİL, CoreService/Dockerfile kullanın (context klasör içi olmalı).
+#
+# Bu dosya için (kök context): Render → Docker Build Args gerekirse SERVICE_DIR ayarlayın:
+#   CoreService/ altında .csproj → SERVICE_DIR=CoreService (varsayılan)
+#   .csproj repo kökünde          → SERVICE_DIR=.
+#   Monorepo                       → SERVICE_DIR=services/core-service/CoreService
 
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+ARG SERVICE_DIR=CoreService
 WORKDIR /src
-COPY CoreService.csproj .
+COPY ${SERVICE_DIR}/CoreService.csproj .
+COPY ${SERVICE_DIR}/ .
 RUN dotnet restore CoreService.csproj
-COPY . .
-RUN dotnet publish -c Release -o /app/publish --no-restore
+RUN dotnet publish CoreService.csproj -c Release -o /app/publish --no-restore
 
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
 WORKDIR /app
