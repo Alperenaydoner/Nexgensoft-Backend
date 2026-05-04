@@ -103,7 +103,12 @@ if (app.Configuration.GetValue("Seed:EnableSiteContentSeed", false))
 
 app.UseForwardedHeaders();
 app.UseRequestLocalization();
-app.UseHttpsRedirection();
+// Render/Docker: Kestrel yalnızca HTTP; TLS edge'de. UseHttpsRedirection HTTPS portu bulamaz (warn [3]).
+if (app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
+
 app.UseRouting();
 
 if (useConfiguredCors || app.Environment.IsDevelopment())
