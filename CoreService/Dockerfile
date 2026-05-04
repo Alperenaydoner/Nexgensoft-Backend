@@ -1,5 +1,5 @@
-# CoreService — Render / generic container host
-# Build context: this directory (set Render "Root Directory" to services/core-service/CoreService).
+# CoreService — local / CI when build context is this folder only.
+# Render (repo root context): use Dockerfile at repository root.
 
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
