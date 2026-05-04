@@ -12,7 +12,7 @@ public class ContactAttachmentConfiguration : IEntityTypeConfiguration<ContactAt
         builder.HasKey(x => x.Id);
         builder.Property(x => x.OriginalFileName).HasMaxLength(260).IsRequired();
         builder.Property(x => x.ContentType).HasMaxLength(128).IsRequired();
-        builder.Property(x => x.ContentBase64).IsRequired().HasColumnType("nvarchar(max)");
+        builder.Property(x => x.ContentBase64).IsRequired().HasColumnType("text");
         builder.HasOne(x => x.ContactMessage)
             .WithMany(m => m.Attachments)
             .HasForeignKey(x => x.ContactMessageId)

@@ -53,7 +53,7 @@ builder.Services.AddControllers()
         o.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
     });
 
-builder.Services.AddSqlServerPersistence(builder.Configuration);
+builder.Services.AddPersistence(builder.Configuration);
 builder.Services.AddContactFeature(builder.Configuration);
 builder.Services.AddContentFeature();
 
@@ -73,6 +73,13 @@ var applyMigrations = app.Configuration.GetValue(
     app.Environment.IsDevelopment());
 if (applyMigrations)
 {
+    // Windows + Supabase: DNS bazen yalnızca AAAA döner; IPv6 rotası yoksa
+    // "İstenen ad geçerli olduğu halde istenen türde bir veri bulunamadı" (SocketException) oluşur.
+    if (app.Configuration.GetValue("Database:PreferIpv4Dns", false))
+    {
+        AppContext.SetSwitch("System.Net.DisableIPv6", true);
+    }
+
     await using var scope = app.Services.CreateAsyncScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await db.Database.MigrateAsync();
