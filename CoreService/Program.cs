@@ -3,11 +3,20 @@ using CoreService.Content;
 using CoreService.Content.Infrastructure;
 using CoreService.Infrastructure;
 using CoreService.Infrastructure.Persistence;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    // Render / tek reverse proxy: gelen X-Forwarded-* güvenilir kabul edilir.
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 builder.WebHost.ConfigureKestrel(o =>
 {
@@ -92,6 +101,7 @@ if (app.Configuration.GetValue("Seed:EnableSiteContentSeed", false))
     await siteSeeder.SeedIfEmptyAsync();
 }
 
+app.UseForwardedHeaders();
 app.UseRequestLocalization();
 app.UseHttpsRedirection();
 app.UseRouting();
