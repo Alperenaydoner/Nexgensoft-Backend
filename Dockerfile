@@ -1,14 +1,12 @@
-# Render / Docker Hub: build context = repository root (Render looks for ./Dockerfile here).
-# CoreService-only context: use services/core-service/CoreService/Dockerfile
+# Nexgensoft-Backend: build context = repository root where CoreService.csproj lives
+# (no services/core-service/... path — that layout is for the full Nexgensoft monorepo only).
+# Monorepo local build: docker build -f services/core-service/CoreService/Dockerfile services/core-service/CoreService
 
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
-
-COPY services/core-service/CoreService/CoreService.csproj services/core-service/CoreService/
-RUN dotnet restore services/core-service/CoreService/CoreService.csproj
-
-COPY services/core-service/CoreService/ services/core-service/CoreService/
-WORKDIR /src/services/core-service/CoreService
+COPY CoreService.csproj .
+RUN dotnet restore CoreService.csproj
+COPY . .
 RUN dotnet publish -c Release -o /app/publish --no-restore
 
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
