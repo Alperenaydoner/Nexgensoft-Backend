@@ -1,0 +1,95 @@
+# CoreService — yerel test istekleri (VS / Rider REST Client, VS Code REST Client)
+# HTTPS: dotnet run --launch-profile https
+# HTTP:  dotnet run --launch-profile http
+
+@CoreService_HostHttps = https://localhost:7001
+@CoreService_HostHttp = http://localhost:5293
+@host = {{CoreService_HostHttps}}
+
+###############################################################################
+### Contact — başarılı (tr) → 200 + ApiResult<guid>
+POST {{host}}/api/v1/contact
+Content-Type: application/json
+Accept-Language: tr
+
+{
+  "fullName": "Ada Lovelace",
+  "email": "ada@example.com",
+  "company": "Nexgensoft",
+  "message": "Merhaba, kısa bir test mesajı.",
+  "attachments": [
+    {
+      "fileName": "pixel.png",
+      "contentType": "image/png",
+      "base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+    }
+  ]
+}
+
+###############################################################################
+### Contact — başarılı (en)
+POST {{host}}/api/v1/contact
+Content-Type: application/json
+Accept-Language: en
+
+{
+  "fullName": "Test User",
+  "email": "test.user@example.com",
+  "company": null,
+  "message": "Hello, this is a test message for the contact endpoint."
+}
+
+###############################################################################
+### Contact — doğrulama hatası (geçersiz e-posta) → 400 + problem+json
+POST {{host}}/api/v1/contact
+Content-Type: application/json
+Accept-Language: tr
+
+{
+  "fullName": "Test",
+  "email": "not-an-email",
+  "company": "",
+  "message": "Mesaj içeriği en az on karakter olmalıdır burada."
+}
+
+###############################################################################
+### Contact — doğrulama (ad boş) → 400
+POST {{host}}/api/v1/contact
+Content-Type: application/json
+Accept-Language: tr
+
+{
+  "fullName": "",
+  "email": "ali@example.com",
+  "message": "Geçerli bir mesaj metni; ancak fullName zorunlu alanı boş bırakıldı."
+}
+
+###############################################################################
+### Content — site paketi (tr) → 200 + SiteContentBundle (navigation, pages, translation)
+GET {{host}}/api/v1/content/site?locale=tr
+Accept: application/json
+Accept-Language: tr
+
+###############################################################################
+### Content — site paketi (en)
+GET {{host}}/api/v1/content/site?locale=en
+Accept: application/json
+Accept-Language: en
+
+###############################################################################
+### Content — locale sorgusu yok (sunucu varsayılanı tr)
+GET {{host}}/api/v1/content/site
+Accept: application/json
+Accept-Language: tr
+
+###############################################################################
+### Content — bilinmeyen locale (normalize: tr’ye düşer)
+GET {{host}}/api/v1/content/site?locale=de
+Accept: application/json
+Accept-Language: de
+
+###############################################################################
+### Content — HTTP profili (HTTPS sertifika sorununda dene)
+GET {{CoreService_HostHttp}}/api/v1/content/site?locale=tr
+Accept: application/json
+Accept-Language: tr
