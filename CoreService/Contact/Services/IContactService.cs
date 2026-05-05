@@ -1,4 +1,4 @@
-using CoreService.Contact.DTOs;
+using CoreService.Contact.DTOs.Requests;
 
 namespace CoreService.Contact.Services;
 

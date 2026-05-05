@@ -1,3 +1,7 @@
+using CoreService.Admin;
+using CoreService.Audit;
+using CoreService.Auth;
+using CoreService.Auth.Services;
 using CoreService.Contact;
 using CoreService.Content;
 using CoreService.Content.Infrastructure;
@@ -63,8 +67,11 @@ builder.Services.AddControllers()
     });
 
 builder.Services.AddPersistence(builder.Configuration);
+builder.Services.AddAuthFeature(builder.Configuration);
+builder.Services.AddAuditFeature(builder.Configuration);
 builder.Services.AddContactFeature(builder.Configuration);
 builder.Services.AddContentFeature();
+builder.Services.AddAdminFeature();
 
 var supported = new[] { "tr", "en" };
 builder.Services.Configure<RequestLocalizationOptions>(o =>
@@ -94,6 +101,12 @@ if (applyMigrations)
     await db.Database.MigrateAsync();
 }
 
+await using (var adminSeedScope = app.Services.CreateAsyncScope())
+{
+    var adminSeeder = adminSeedScope.ServiceProvider.GetRequiredService<IAdminUserSeeder>();
+    await adminSeeder.SeedAdminIfEnabledAsync();
+}
+
 if (app.Configuration.GetValue("Seed:EnableSiteContentSeed", false))
 {
     await using var scope = app.Services.CreateAsyncScope();
@@ -116,7 +129,9 @@ if (useConfiguredCors || app.Environment.IsDevelopment())
     app.UseCors("NexgensoftWeb");
 }
 
+app.UseAuthentication();
 app.UseAuthorization();
+app.UseRequestAudit();
 
 app.MapControllers();
 

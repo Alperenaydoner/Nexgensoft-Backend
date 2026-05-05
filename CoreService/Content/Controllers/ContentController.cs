@@ -1,3 +1,4 @@
+using CoreService.Audit.Attributes;
 using CoreService.Content.DTOs.Responses;
 using CoreService.Content.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -6,40 +7,35 @@ using Microsoft.AspNetCore.Mvc;
 namespace CoreService.Content.Controllers;
 
 /// <summary>
-/// Site içeriği (navigasyon, sayfa blokları) için API — uzaktan içerik senaryosu.
+/// Site içeriği (navigasyon, sayfa blokları) — GET <c>/api/v1/content/site</c>.
 /// </summary>
 [ApiController]
-[Route("api/v1/[controller]")]
-public class ContentController : ControllerBase
+[AllowAnonymous]
+[Route("api/v1/content")]
+[Produces("application/json")]
+public class ContentController(ISiteContentService siteContentService, ILogger<ContentController> logger) : ControllerBase
 {
-    private readonly ISiteContentService _siteContentService;
-    private readonly ILogger<ContentController> _logger;
-
-    public ContentController(ISiteContentService siteContentService, ILogger<ContentController> logger)
-    {
-        _siteContentService = siteContentService;
-        _logger = logger;
-    }
-
-    /// <summary>
-    /// Yerelle göre site içerik paketini getirir (GET /api/v1/content/site?locale=tr).
-    /// </summary>
+    /// <summary>GET /api/v1/content/site?locale=tr — site içerik paketi.</summary>
     [HttpGet("site")]
-    [AllowAnonymous]
+    [AuditAction("SiteIcerikPaketi", "Site içeriği", "Site içeriği getirildi. locale={locale}")]
     [ProducesResponseType(typeof(SiteContentBundle), StatusCodes.Status200OK)]
-    public async Task<ActionResult<SiteContentBundle>> GetSite(
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<SiteContentBundle>> GetSiteAsync(
         [FromQuery] string? locale,
         CancellationToken cancellationToken)
     {
         try
         {
-            var bundle = await _siteContentService.GetBundleAsync(locale, cancellationToken);
+            var bundle = await siteContentService.GetBundleAsync(locale, cancellationToken);
             return Ok(bundle);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Site içeriği getirilirken hata: Locale={Locale}", locale);
-            return StatusCode(500, new { message = "Site içeriği getirilirken bir hata oluştu.", error = ex.Message });
+            logger.LogError(ex, "Site içeriği getirilirken hata: Locale={Locale}", locale);
+            return Problem(
+                title: "Site içeriği getirilirken bir hata oluştu.",
+                statusCode: StatusCodes.Status500InternalServerError,
+                extensions: new Dictionary<string, object?> { ["errorCode"] = "Content.SiteReadFailed" });
         }
     }
 }

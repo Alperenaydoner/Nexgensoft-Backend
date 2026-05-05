@@ -1,8 +1,8 @@
-using CoreService.Contact.Domain;
+using CoreService.Contact.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace CoreService.Contact.Infrastructure;
+namespace CoreService.Contact.Infrastructure.EntityConfiguration;
 
 public class ContactAttachmentConfiguration : IEntityTypeConfiguration<ContactAttachment>
 {

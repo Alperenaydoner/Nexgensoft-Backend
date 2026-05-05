@@ -24,4 +24,30 @@ public class SiteContentRepository(AppDbContext db) : ISiteContentRepository
 
     public Task<bool> HasAnyStringsAsync(CancellationToken cancellationToken = default) =>
         db.SiteLocalizedStrings.AsNoTracking().AnyAsync(cancellationToken);
+
+    public Task<int> CountBundlesAsync(CancellationToken cancellationToken = default) =>
+        db.SiteContentBundles.AsNoTracking().CountAsync(cancellationToken);
+
+    public Task<int> CountLocalizedStringsAsync(CancellationToken cancellationToken = default) =>
+        db.SiteLocalizedStrings.AsNoTracking().CountAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<(string Locale, int Count)>> GetLocalizedStringCountsByLocaleAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var rows = await db.SiteLocalizedStrings.AsNoTracking()
+            .GroupBy(x => x.Locale)
+            .Select(g => new { Locale = g.Key, Count = g.Count() })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        return rows.Select(r => (r.Locale, r.Count)).ToList();
+    }
+
+    public async Task<IReadOnlyList<string>> GetBundleLocalesAsync(CancellationToken cancellationToken = default)
+    {
+        return await db.SiteContentBundles.AsNoTracking()
+            .Select(x => x.Locale)
+            .OrderBy(x => x)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
 }

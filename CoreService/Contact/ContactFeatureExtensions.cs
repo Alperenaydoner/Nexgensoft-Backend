@@ -1,6 +1,5 @@
-using CoreService.Contact.Domain;
 using CoreService.Contact.DTOs;
-using CoreService.Contact.Infrastructure;
+using CoreService.Contact.Infrastructure.Repositories;
 using CoreService.Contact.Services;
 
 namespace CoreService.Contact;

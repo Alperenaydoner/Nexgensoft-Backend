@@ -25,7 +25,7 @@ namespace CoreService.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("CoreService.Contact.Domain.ContactAttachment", b =>
+            modelBuilder.Entity("CoreService.Contact.Domain.Entities.ContactAttachment", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -58,7 +58,7 @@ namespace CoreService.Infrastructure.Persistence.Migrations
                     b.ToTable("contact_attachments", (string)null);
                 });
 
-            modelBuilder.Entity("CoreService.Contact.Domain.ContactMessage", b =>
+            modelBuilder.Entity("CoreService.Contact.Domain.Entities.ContactMessage", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -146,9 +146,9 @@ namespace CoreService.Infrastructure.Persistence.Migrations
                     b.ToTable("site_localized_strings", (string)null);
                 });
 
-            modelBuilder.Entity("CoreService.Contact.Domain.ContactAttachment", b =>
+            modelBuilder.Entity("CoreService.Contact.Domain.Entities.ContactAttachment", b =>
                 {
-                    b.HasOne("CoreService.Contact.Domain.ContactMessage", "ContactMessage")
+                    b.HasOne("CoreService.Contact.Domain.Entities.ContactMessage", "ContactMessage")
                         .WithMany("Attachments")
                         .HasForeignKey("ContactMessageId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -157,7 +157,7 @@ namespace CoreService.Infrastructure.Persistence.Migrations
                     b.Navigation("ContactMessage");
                 });
 
-            modelBuilder.Entity("CoreService.Contact.Domain.ContactMessage", b =>
+            modelBuilder.Entity("CoreService.Contact.Domain.Entities.ContactMessage", b =>
                 {
                     b.Navigation("Attachments");
                 });

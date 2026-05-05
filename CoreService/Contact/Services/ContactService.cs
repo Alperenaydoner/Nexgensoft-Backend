@@ -1,5 +1,7 @@
-using CoreService.Contact.Domain;
+using CoreService.Contact.Domain.Entities;
 using CoreService.Contact.DTOs;
+using CoreService.Contact.DTOs.Requests;
+using CoreService.Contact.Infrastructure.Repositories;
 using Microsoft.Extensions.Options;
 
 namespace CoreService.Contact.Services;

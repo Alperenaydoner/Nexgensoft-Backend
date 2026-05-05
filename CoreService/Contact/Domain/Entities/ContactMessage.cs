@@ -1,4 +1,4 @@
-namespace CoreService.Contact.Domain;
+namespace CoreService.Contact.Domain.Entities;
 
 public class ContactMessage
 {

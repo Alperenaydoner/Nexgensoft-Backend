@@ -11,4 +11,13 @@ public interface ISiteContentRepository
     Task<IReadOnlyDictionary<string, string>> GetStringDictionaryAsync(string locale, CancellationToken cancellationToken = default);
 
     Task<bool> HasAnyStringsAsync(CancellationToken cancellationToken = default);
+
+    Task<int> CountBundlesAsync(CancellationToken cancellationToken = default);
+
+    Task<int> CountLocalizedStringsAsync(CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<(string Locale, int Count)>> GetLocalizedStringCountsByLocaleAsync(
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<string>> GetBundleLocalesAsync(CancellationToken cancellationToken = default);
 }
