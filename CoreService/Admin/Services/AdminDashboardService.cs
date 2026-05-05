@@ -1,4 +1,6 @@
 using CoreService.Admin.DTOs;
+using CoreService.Application.Domain.Entities;
+using CoreService.Application.Infrastructure.Repositories;
 using CoreService.Common;
 using CoreService.Audit.Domain.Entities;
 using CoreService.Audit.Infrastructure.Repositories;
@@ -7,30 +9,39 @@ using CoreService.Auth.Infrastructure.Repositories;
 using CoreService.Contact.Domain.Entities;
 using CoreService.Contact.Infrastructure.Repositories;
 using CoreService.Content.Infrastructure.Repositories;
+using CoreService.Content.Domain.Entities;
 
 namespace CoreService.Admin.Services;
 
 public class AdminDashboardService(
     IUserRepository users,
     IContactRepository contacts,
+    IApplicationRepository applications,
     ISiteContentRepository siteContent,
     IHttpRequestLogRepository httpLogs) : IAdminDashboardService
 {
     public async Task<AdminStatsDto> GetStatsAsync(CancellationToken cancellationToken = default)
     {
+        // Repositories share the same scoped DbContext; keep these awaited sequentially
+        // to avoid "A second operation was started on this context instance" errors.
         var userCount = await users.CountUsersAsync(cancellationToken).ConfigureAwait(false);
         var roleCount = await users.CountRolesAsync(cancellationToken).ConfigureAwait(false);
         var contactMessageCount = await contacts.CountMessagesAsync(cancellationToken).ConfigureAwait(false);
         var contactAttachmentCount = await contacts.CountAttachmentsAsync(cancellationToken).ConfigureAwait(false);
+        var jobApplicationCount = await applications.CountApplicationsAsync(cancellationToken).ConfigureAwait(false);
+        var jobApplicationAttachmentCount = await applications.CountAttachmentsAsync(cancellationToken).ConfigureAwait(false);
         var httpRequestLogCount = await httpLogs.CountAsync(cancellationToken).ConfigureAwait(false);
         var bundleCount = await siteContent.CountBundlesAsync(cancellationToken).ConfigureAwait(false);
         var stringCount = await siteContent.CountLocalizedStringsAsync(cancellationToken).ConfigureAwait(false);
+
         return new AdminStatsDto
         {
             UserCount = userCount,
             RoleCount = roleCount,
             ContactMessageCount = contactMessageCount,
             ContactAttachmentCount = contactAttachmentCount,
+            JobApplicationCount = jobApplicationCount,
+            JobApplicationAttachmentCount = jobApplicationAttachmentCount,
             HttpRequestLogCount = httpRequestLogCount,
             SiteContentBundleCount = bundleCount,
             SiteLocalizedStringCount = stringCount,
@@ -40,11 +51,16 @@ public class AdminDashboardService(
     public async Task<PagedResult<AdminUserListItemDto>> GetUsersAsync(
         int page,
         int pageSize,
+        string? query,
+        bool? isActive,
+        string? role,
+        string? sortBy,
+        string? sortDir,
         CancellationToken cancellationToken = default)
     {
         var pr = new PageRequest(page, pageSize);
         var (items, total) = await users
-            .GetUsersPagedWithRolesAsync(pr.Skip, pr.PageSize, cancellationToken)
+            .GetUsersPagedWithRolesAsync(pr.Skip, pr.PageSize, query, isActive, role, sortBy, sortDir, cancellationToken)
             .ConfigureAwait(false);
         var dtos = items.Select(MapUserListItem).ToList();
         return PagedResult<AdminUserListItemDto>.Create(dtos, pr, total);
@@ -74,11 +90,14 @@ public class AdminDashboardService(
     public async Task<PagedResult<AdminRoleListItemDto>> GetRolesAsync(
         int page,
         int pageSize,
+        string? query,
+        string? sortBy,
+        string? sortDir,
         CancellationToken cancellationToken = default)
     {
         var pr = new PageRequest(page, pageSize);
         var (items, total) = await users
-            .GetRolesPagedWithUserCountsAsync(pr.Skip, pr.PageSize, cancellationToken)
+            .GetRolesPagedWithUserCountsAsync(pr.Skip, pr.PageSize, query, sortBy, sortDir, cancellationToken)
             .ConfigureAwait(false);
         var dtos = items.Select(r => new AdminRoleListItemDto
         {
@@ -90,14 +109,156 @@ public class AdminDashboardService(
         return PagedResult<AdminRoleListItemDto>.Create(dtos, pr, total);
     }
 
+    public async Task<AdminRoleOptionsDto> GetRoleOptionsAsync(CancellationToken cancellationToken = default)
+    {
+        var items = await users.GetAllRoleNamesAsync(cancellationToken).ConfigureAwait(false);
+        return new AdminRoleOptionsDto { Items = items };
+    }
+
+    public async Task<AdminUserDetailDto> CreateUserAsync(AdminUserUpsertRequestDto request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var email = request.Email?.Trim() ?? string.Empty;
+        var normalizedEmail = email.ToUpperInvariant();
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            throw new InvalidOperationException("Email is required.");
+        }
+
+        if (await users.AnyUserWithNormalizedEmailAsync(normalizedEmail, cancellationToken).ConfigureAwait(false))
+        {
+            throw new InvalidOperationException("Email already exists.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Password))
+        {
+            throw new InvalidOperationException("Password is required.");
+        }
+
+        var user = new AppUser
+        {
+            Id = Guid.NewGuid(),
+            Email = email,
+            NormalizedEmail = normalizedEmail,
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+            DisplayName = string.IsNullOrWhiteSpace(request.DisplayName) ? email : request.DisplayName.Trim(),
+            IsActive = request.IsActive,
+            CreatedAtUtc = DateTime.UtcNow,
+        };
+        var created = await users.CreateUserAsync(user, request.Roles ?? Array.Empty<string>(), cancellationToken).ConfigureAwait(false);
+        return await BuildUserDetailDtoAsync(created.Id, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<AdminUserDetailDto?> UpdateUserAsync(Guid id, AdminUserUpsertRequestDto request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var email = request.Email?.Trim() ?? string.Empty;
+        var normalizedEmail = email.ToUpperInvariant();
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            throw new InvalidOperationException("Email is required.");
+        }
+
+        var existingByEmail = await users.GetByNormalizedEmailWithRolesAsync(normalizedEmail, cancellationToken).ConfigureAwait(false);
+        if (existingByEmail is not null && existingByEmail.Id != id)
+        {
+            throw new InvalidOperationException("Email already exists.");
+        }
+
+        var updated = await users.UpdateUserAsync(
+            id,
+            email,
+            string.IsNullOrWhiteSpace(request.DisplayName) ? email : request.DisplayName.Trim(),
+            request.IsActive,
+            request.Password,
+            request.Roles ?? Array.Empty<string>(),
+            cancellationToken).ConfigureAwait(false);
+        if (updated is null)
+        {
+            return null;
+        }
+
+        return await BuildUserDetailDtoAsync(updated.Id, cancellationToken).ConfigureAwait(false);
+    }
+
+    public Task<bool> DeleteUserAsync(Guid id, CancellationToken cancellationToken = default) =>
+        users.DeleteUserAsync(id, cancellationToken);
+
+    public Task<int> DeleteUsersAsync(IReadOnlyList<Guid> ids, CancellationToken cancellationToken = default) =>
+        users.DeleteUsersAsync(ids, cancellationToken);
+
+    public async Task<AdminRoleListItemDto> CreateRoleAsync(AdminRoleUpsertRequestDto request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var name = request.Name?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw new InvalidOperationException("Role name is required.");
+        }
+
+        var normalizedName = name.ToUpperInvariant();
+        if (await users.AnyRoleWithNormalizedNameAsync(normalizedName, cancellationToken).ConfigureAwait(false))
+        {
+            throw new InvalidOperationException("Role already exists.");
+        }
+
+        var role = await users.CreateRoleAsync(new AppRole
+        {
+            Id = Guid.NewGuid(),
+            Name = name,
+            NormalizedName = normalizedName,
+        }, cancellationToken).ConfigureAwait(false);
+        return new AdminRoleListItemDto { Id = role.Id, Name = role.Name, NormalizedName = role.NormalizedName, UserCount = 0 };
+    }
+
+    public async Task<AdminRoleListItemDto?> UpdateRoleAsync(Guid id, AdminRoleUpsertRequestDto request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var name = request.Name?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw new InvalidOperationException("Role name is required.");
+        }
+
+        var normalizedName = name.ToUpperInvariant();
+        var existing = await users.GetRoleByNormalizedNameAsync(normalizedName, cancellationToken).ConfigureAwait(false);
+        if (existing is not null && existing.Id != id)
+        {
+            throw new InvalidOperationException("Role already exists.");
+        }
+
+        var role = await users.UpdateRoleAsync(id, name, cancellationToken).ConfigureAwait(false);
+        if (role is null)
+        {
+            return null;
+        }
+
+        return new AdminRoleListItemDto
+        {
+            Id = role.Id,
+            Name = role.Name,
+            NormalizedName = role.NormalizedName,
+            UserCount = role.UserRoles.Count,
+        };
+    }
+
+    public Task<bool> DeleteRoleAsync(Guid id, CancellationToken cancellationToken = default) =>
+        users.DeleteRoleAsync(id, cancellationToken);
+
     public async Task<PagedResult<AdminContactMessageListItemDto>> GetContactMessagesAsync(
         int page,
         int pageSize,
+        string? query,
+        bool? hasAttachments,
+        DateTime? fromUtc,
+        DateTime? toUtc,
+        string? sortBy,
+        string? sortDir,
         CancellationToken cancellationToken = default)
     {
         var pr = new PageRequest(page, pageSize);
         var (items, total) = await contacts
-            .GetMessagesPagedAsync(pr.Skip, pr.PageSize, cancellationToken)
+            .GetMessagesPagedAsync(pr.Skip, pr.PageSize, query, hasAttachments, fromUtc, toUtc, sortBy, sortDir, cancellationToken)
             .ConfigureAwait(false);
         var dtos = items.Select(m => new AdminContactMessageListItemDto
         {
@@ -140,6 +301,82 @@ public class AdminDashboardService(
     {
         var att = await contacts.GetAttachmentByIdAsync(attachmentId, cancellationToken).ConfigureAwait(false);
         if (att is null || att.ContactMessageId != messageId)
+        {
+            return null;
+        }
+
+        byte[] bytes;
+        try
+        {
+            bytes = Convert.FromBase64String(att.ContentBase64);
+        }
+        catch (FormatException)
+        {
+            return null;
+        }
+
+        return (bytes, string.IsNullOrWhiteSpace(att.ContentType) ? "application/octet-stream" : att.ContentType, att.OriginalFileName);
+    }
+
+    public async Task<PagedResult<AdminJobApplicationListItemDto>> GetJobApplicationsAsync(
+        int page,
+        int pageSize,
+        string? query,
+        string? position,
+        bool? hasAttachments,
+        DateTime? fromUtc,
+        DateTime? toUtc,
+        string? sortBy,
+        string? sortDir,
+        CancellationToken cancellationToken = default)
+    {
+        var pr = new PageRequest(page, pageSize);
+        var (items, total) = await applications
+            .GetApplicationsPagedAsync(pr.Skip, pr.PageSize, query, position, hasAttachments, fromUtc, toUtc, sortBy, sortDir, cancellationToken)
+            .ConfigureAwait(false);
+        var dtos = items.Select(a => new AdminJobApplicationListItemDto
+        {
+            Id = a.Id,
+            FullName = a.FullName,
+            Email = a.Email,
+            Phone = a.Phone,
+            Position = a.Position,
+            CreatedAtUtc = a.CreatedAtUtc,
+            AttachmentCount = a.Attachments.Count,
+        }).ToList();
+        return PagedResult<AdminJobApplicationListItemDto>.Create(dtos, pr, total);
+    }
+
+    public async Task<AdminJobApplicationDetailDto?> GetJobApplicationDetailAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var a = await applications.GetApplicationWithAttachmentsByIdAsync(id, cancellationToken).ConfigureAwait(false);
+        if (a is null)
+        {
+            return null;
+        }
+
+        return new AdminJobApplicationDetailDto
+        {
+            Id = a.Id,
+            FullName = a.FullName,
+            Email = a.Email,
+            Phone = a.Phone,
+            Position = a.Position,
+            CoverLetter = a.CoverLetter,
+            CreatedAtUtc = a.CreatedAtUtc,
+            Attachments = a.Attachments.Select(MapApplicationAttachment).ToList(),
+        };
+    }
+
+    public async Task<(byte[] Bytes, string ContentType, string DownloadName)?> GetJobApplicationAttachmentFileAsync(
+        Guid applicationId,
+        Guid attachmentId,
+        CancellationToken cancellationToken = default)
+    {
+        var att = await applications.GetAttachmentByIdAsync(attachmentId, cancellationToken).ConfigureAwait(false);
+        if (att is null || att.JobApplicationId != applicationId)
         {
             return null;
         }
@@ -245,6 +482,94 @@ public class AdminDashboardService(
         };
     }
 
+    public async Task<AdminContentLocaleDetailDto> GetContentLocaleDetailAsync(string locale, CancellationToken cancellationToken = default)
+    {
+        var normalized = (locale ?? string.Empty).Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            throw new InvalidOperationException("Locale is required.");
+        }
+        var items = await siteContent.GetLocalizedStringsByLocaleAsync(normalized, cancellationToken).ConfigureAwait(false);
+        return new AdminContentLocaleDetailDto
+        {
+            Locale = normalized,
+            Items = items
+                .OrderBy(x => x.StringKey, StringComparer.Ordinal)
+                .Select(x => new AdminContentStringRowDto { Key = x.StringKey, Value = x.Content })
+                .ToList(),
+        };
+    }
+
+    public async Task<AdminContentLocaleDetailDto> UpsertContentLocaleAsync(
+        AdminContentBulkUpsertRequestDto request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var locale = request.Locale?.Trim().ToLowerInvariant() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(locale))
+        {
+            throw new InvalidOperationException("Locale is required.");
+        }
+
+        var normalizedItems = (request.Items ?? Array.Empty<AdminContentStringRowDto>())
+            .Where(x => !string.IsNullOrWhiteSpace(x.Key))
+            .Select(x => new AdminContentStringRowDto
+            {
+                Key = x.Key.Trim(),
+                Value = x.Value ?? string.Empty,
+            })
+            .ToList();
+        var duplicateKeys = normalizedItems
+            .GroupBy(x => x.Key, StringComparer.Ordinal)
+            .Where(g => g.Count() > 1)
+            .Select(g => g.Key)
+            .ToList();
+        if (duplicateKeys.Count > 0)
+        {
+            throw new InvalidOperationException($"Duplicate keys: {string.Join(", ", duplicateKeys.Take(5))}");
+        }
+
+        var rows = normalizedItems
+            .Select(x => new SiteLocalizedStringEntity
+            {
+                Locale = locale,
+                StringKey = x.Key,
+                Content = x.Value,
+            })
+            .ToList();
+        await siteContent.UpsertLocalizedStringsAsync(locale, rows, cancellationToken).ConfigureAwait(false);
+        return await GetContentLocaleDetailAsync(locale, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<IReadOnlyList<AdminContentAuditRowDto>> GetRecentContentAuditAsync(
+        string locale,
+        int take,
+        CancellationToken cancellationToken = default)
+    {
+        var normalized = (locale ?? string.Empty).Trim().ToLowerInvariant();
+        var (items, _) = await httpLogs.GetPagedAsync(
+            0,
+            Math.Clamp(take, 1, 100),
+            null,
+            "content",
+            null,
+            null,
+            cancellationToken).ConfigureAwait(false);
+
+        return items
+            .Where(x => string.IsNullOrWhiteSpace(normalized) || x.Path.Contains(normalized, StringComparison.OrdinalIgnoreCase))
+            .Select(x => new AdminContentAuditRowDto
+            {
+                Id = x.Id,
+                OccurredAtUtc = x.OccurredAtUtc,
+                Path = x.Path,
+                StatusCode = x.StatusCode,
+                UserEmail = x.UserEmail,
+                ActionTitle = x.ActionTitle,
+            })
+            .ToList();
+    }
+
     private static AdminUserListItemDto MapUserListItem(AppUser u) => new()
     {
         Id = u.Id,
@@ -256,6 +581,15 @@ public class AdminDashboardService(
     };
 
     private static AdminContactAttachmentDto MapAttachment(ContactAttachment a) => new()
+    {
+        Id = a.Id,
+        OriginalFileName = a.OriginalFileName,
+        ContentType = a.ContentType,
+        SizeBytes = a.SizeBytes,
+        IsImage = a.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase),
+    };
+
+    private static AdminJobApplicationAttachmentDto MapApplicationAttachment(JobApplicationAttachment a) => new()
     {
         Id = a.Id,
         OriginalFileName = a.OriginalFileName,
@@ -276,4 +610,21 @@ public class AdminDashboardService(
         UserEmail = log.UserEmail,
         ActionType = log.ActionType,
     };
+
+    private async Task<AdminUserDetailDto> BuildUserDetailDtoAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var user = await users.GetUserByIdWithRolesAsync(id, cancellationToken).ConfigureAwait(false)
+            ?? throw new InvalidOperationException("User not found.");
+        var row = MapUserListItem(user);
+        return new AdminUserDetailDto
+        {
+            Id = row.Id,
+            Email = row.Email,
+            DisplayName = row.DisplayName,
+            IsActive = row.IsActive,
+            CreatedAtUtc = row.CreatedAtUtc,
+            Roles = row.Roles,
+            NormalizedEmail = user.NormalizedEmail,
+        };
+    }
 }

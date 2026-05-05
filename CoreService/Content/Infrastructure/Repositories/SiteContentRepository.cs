@@ -50,4 +50,36 @@ public class SiteContentRepository(AppDbContext db) : ISiteContentRepository
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
     }
+
+    public async Task<IReadOnlyList<SiteLocalizedStringEntity>> GetLocalizedStringsByLocaleAsync(
+        string locale,
+        CancellationToken cancellationToken = default)
+    {
+        return await db.SiteLocalizedStrings.AsNoTracking()
+            .Where(x => x.Locale == locale)
+            .OrderBy(x => x.StringKey)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task UpsertLocalizedStringsAsync(
+        string locale,
+        IReadOnlyList<SiteLocalizedStringEntity> rows,
+        CancellationToken cancellationToken = default)
+    {
+        var existing = await db.SiteLocalizedStrings
+            .Where(x => x.Locale == locale)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        db.SiteLocalizedStrings.RemoveRange(existing);
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        if (rows.Count == 0)
+        {
+            return;
+        }
+
+        db.SiteLocalizedStrings.AddRange(rows);
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+    }
 }

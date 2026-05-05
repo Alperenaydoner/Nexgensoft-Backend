@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using CoreService.Audit.Attributes;
+using CoreService.Common;
 using CoreService.Auth.DTOs.Requests;
 using CoreService.Auth.DTOs.Responses;
 using CoreService.Auth.Services;
@@ -30,7 +31,7 @@ public class AuthController(IAuthService authService) : ControllerBase
         var result = await authService.LoginAsync(body, cancellationToken);
         if (result is null)
         {
-            return Unauthorized(new { message = "Geçersiz e-posta veya parola." });
+            return this.ProblemFromCatalog(ProblemCatalog.Auth.InvalidCredentials, "Invalid email or password.");
         }
 
         return Ok(result);

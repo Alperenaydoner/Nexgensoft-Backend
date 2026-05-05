@@ -16,6 +16,12 @@ public interface IContactRepository
     Task<(IReadOnlyList<ContactMessage> Items, int TotalCount)> GetMessagesPagedAsync(
         int skip,
         int take,
+        string? query,
+        bool? hasAttachments,
+        DateTime? fromUtc,
+        DateTime? toUtc,
+        string? sortBy,
+        string? sortDir,
         CancellationToken cancellationToken = default);
 
     Task<ContactMessage?> GetMessageWithAttachmentsByIdAsync(Guid id, CancellationToken cancellationToken = default);

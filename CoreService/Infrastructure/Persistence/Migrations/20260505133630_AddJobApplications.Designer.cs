@@ -3,6 +3,7 @@ using System;
 using CoreService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace CoreService.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260505133630_AddJobApplications")]
+    partial class AddJobApplications
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -90,75 +93,6 @@ namespace CoreService.Infrastructure.Persistence.Migrations
                     b.HasIndex("JobApplicationId");
 
                     b.ToTable("job_application_attachments", (string)null);
-                });
-
-            modelBuilder.Entity("CoreService.Application.Domain.Entities.JobPosition", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<int>("SortOrder")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Name")
-                        .IsUnique();
-
-                    b.ToTable("job_positions", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("5fcba5fd-2c26-4634-a8a4-c9892a2a2a11"),
-                            IsActive = true,
-                            Name = "Asistan",
-                            SortOrder = 10
-                        },
-                        new
-                        {
-                            Id = new Guid("537da80b-3fde-4ec0-9946-84d2efd2d214"),
-                            IsActive = true,
-                            Name = "Sofor",
-                            SortOrder = 20
-                        },
-                        new
-                        {
-                            Id = new Guid("3c26d21f-ba4d-4e8a-9c89-296a6c0a0381"),
-                            IsActive = true,
-                            Name = "Yazilim Gelistirici",
-                            SortOrder = 30
-                        },
-                        new
-                        {
-                            Id = new Guid("b089a454-5d9b-4267-84c4-bb3f02579d88"),
-                            IsActive = true,
-                            Name = "Frontend Gelistirici",
-                            SortOrder = 40
-                        },
-                        new
-                        {
-                            Id = new Guid("8dc3a70a-5719-4ee4-9a95-9d471c61139e"),
-                            IsActive = true,
-                            Name = "DevOps Muhendisi",
-                            SortOrder = 50
-                        },
-                        new
-                        {
-                            Id = new Guid("c2af8e5e-c91d-4ea2-a34e-75257d7fb016"),
-                            IsActive = true,
-                            Name = "Stajyer",
-                            SortOrder = 60
-                        });
                 });
 
             modelBuilder.Entity("CoreService.Audit.Domain.Entities.HttpRequestLog", b =>

@@ -29,12 +29,53 @@ public class ContactRepository(AppDbContext db) : IContactRepository
     public async Task<(IReadOnlyList<ContactMessage> Items, int TotalCount)> GetMessagesPagedAsync(
         int skip,
         int take,
+        string? query,
+        bool? hasAttachments,
+        DateTime? fromUtc,
+        DateTime? toUtc,
+        string? sortBy,
+        string? sortDir,
         CancellationToken cancellationToken = default)
     {
         var q = db.ContactMessages.AsNoTracking();
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            var qq = query.Trim().ToUpperInvariant();
+            q = q.Where(m =>
+                m.FullName.ToUpper().Contains(qq) ||
+                m.Email.ToUpper().Contains(qq) ||
+                (m.Company != null && m.Company.ToUpper().Contains(qq)) ||
+                m.Message.ToUpper().Contains(qq));
+        }
+
+        if (hasAttachments.HasValue)
+        {
+            q = hasAttachments.Value
+                ? q.Where(m => m.Attachments.Any())
+                : q.Where(m => !m.Attachments.Any());
+        }
+
+        if (fromUtc.HasValue)
+        {
+            q = q.Where(m => m.CreatedAtUtc >= fromUtc.Value);
+        }
+
+        if (toUtc.HasValue)
+        {
+            q = q.Where(m => m.CreatedAtUtc <= toUtc.Value);
+        }
+
+        var asc = string.Equals(sortDir, "asc", StringComparison.OrdinalIgnoreCase);
+        q = (sortBy ?? string.Empty).ToLowerInvariant() switch
+        {
+            "fullname" => asc ? q.OrderBy(m => m.FullName) : q.OrderByDescending(m => m.FullName),
+            "email" => asc ? q.OrderBy(m => m.Email) : q.OrderByDescending(m => m.Email),
+            "attachments" => asc ? q.OrderBy(m => m.Attachments.Count) : q.OrderByDescending(m => m.Attachments.Count),
+            _ => asc ? q.OrderBy(m => m.CreatedAtUtc) : q.OrderByDescending(m => m.CreatedAtUtc),
+        };
+
         var total = await q.CountAsync(cancellationToken).ConfigureAwait(false);
         var items = await q
-            .OrderByDescending(m => m.CreatedAtUtc)
             .Skip(skip)
             .Take(take)
             .Include(m => m.Attachments)

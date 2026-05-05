@@ -20,4 +20,13 @@ public interface ISiteContentRepository
         CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<string>> GetBundleLocalesAsync(CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<SiteLocalizedStringEntity>> GetLocalizedStringsByLocaleAsync(
+        string locale,
+        CancellationToken cancellationToken = default);
+
+    Task UpsertLocalizedStringsAsync(
+        string locale,
+        IReadOnlyList<SiteLocalizedStringEntity> rows,
+        CancellationToken cancellationToken = default);
 }

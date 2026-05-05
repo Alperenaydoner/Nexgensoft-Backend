@@ -16,6 +16,12 @@ public sealed class AdminStatsDto
     [JsonPropertyName("contactAttachmentCount")]
     public int ContactAttachmentCount { get; init; }
 
+    [JsonPropertyName("jobApplicationCount")]
+    public int JobApplicationCount { get; init; }
+
+    [JsonPropertyName("jobApplicationAttachmentCount")]
+    public int JobApplicationAttachmentCount { get; init; }
+
     [JsonPropertyName("httpRequestLogCount")]
     public int HttpRequestLogCount { get; init; }
 
@@ -53,6 +59,36 @@ public sealed class AdminUserDetailDto : AdminUserListItemDto
     public string NormalizedEmail { get; init; } = string.Empty;
 }
 
+public sealed class AdminUserUpsertRequestDto
+{
+    [JsonPropertyName("email")]
+    public string Email { get; init; } = string.Empty;
+
+    [JsonPropertyName("displayName")]
+    public string DisplayName { get; init; } = string.Empty;
+
+    [JsonPropertyName("isActive")]
+    public bool IsActive { get; init; } = true;
+
+    [JsonPropertyName("password")]
+    public string? Password { get; init; }
+
+    [JsonPropertyName("roles")]
+    public IReadOnlyList<string> Roles { get; init; } = Array.Empty<string>();
+}
+
+public sealed class AdminBulkDeleteUsersRequestDto
+{
+    [JsonPropertyName("ids")]
+    public IReadOnlyList<Guid> Ids { get; init; } = Array.Empty<Guid>();
+}
+
+public sealed class AdminBulkDeleteResultDto
+{
+    [JsonPropertyName("deletedCount")]
+    public int DeletedCount { get; init; }
+}
+
 public sealed class AdminRoleListItemDto
 {
     [JsonPropertyName("id")]
@@ -66,6 +102,18 @@ public sealed class AdminRoleListItemDto
 
     [JsonPropertyName("userCount")]
     public int UserCount { get; init; }
+}
+
+public sealed class AdminRoleUpsertRequestDto
+{
+    [JsonPropertyName("name")]
+    public string Name { get; init; } = string.Empty;
+}
+
+public sealed class AdminRoleOptionsDto
+{
+    [JsonPropertyName("items")]
+    public IReadOnlyList<string> Items { get; init; } = Array.Empty<string>();
 }
 
 public sealed class AdminContactMessageListItemDto
@@ -129,6 +177,75 @@ public sealed class AdminContactMessageDetailDto
 
     [JsonPropertyName("attachments")]
     public IReadOnlyList<AdminContactAttachmentDto> Attachments { get; init; } = Array.Empty<AdminContactAttachmentDto>();
+}
+
+public sealed class AdminJobApplicationListItemDto
+{
+    [JsonPropertyName("id")]
+    public Guid Id { get; init; }
+
+    [JsonPropertyName("fullName")]
+    public string FullName { get; init; } = string.Empty;
+
+    [JsonPropertyName("email")]
+    public string Email { get; init; } = string.Empty;
+
+    [JsonPropertyName("phone")]
+    public string? Phone { get; init; }
+
+    [JsonPropertyName("position")]
+    public string Position { get; init; } = string.Empty;
+
+    [JsonPropertyName("createdAtUtc")]
+    public DateTime CreatedAtUtc { get; init; }
+
+    [JsonPropertyName("attachmentCount")]
+    public int AttachmentCount { get; init; }
+}
+
+public sealed class AdminJobApplicationAttachmentDto
+{
+    [JsonPropertyName("id")]
+    public Guid Id { get; init; }
+
+    [JsonPropertyName("originalFileName")]
+    public string OriginalFileName { get; init; } = string.Empty;
+
+    [JsonPropertyName("contentType")]
+    public string ContentType { get; init; } = string.Empty;
+
+    [JsonPropertyName("sizeBytes")]
+    public long SizeBytes { get; init; }
+
+    [JsonPropertyName("isImage")]
+    public bool IsImage { get; init; }
+}
+
+public sealed class AdminJobApplicationDetailDto
+{
+    [JsonPropertyName("id")]
+    public Guid Id { get; init; }
+
+    [JsonPropertyName("fullName")]
+    public string FullName { get; init; } = string.Empty;
+
+    [JsonPropertyName("email")]
+    public string Email { get; init; } = string.Empty;
+
+    [JsonPropertyName("phone")]
+    public string? Phone { get; init; }
+
+    [JsonPropertyName("position")]
+    public string Position { get; init; } = string.Empty;
+
+    [JsonPropertyName("coverLetter")]
+    public string? CoverLetter { get; init; }
+
+    [JsonPropertyName("createdAtUtc")]
+    public DateTime CreatedAtUtc { get; init; }
+
+    [JsonPropertyName("attachments")]
+    public IReadOnlyList<AdminJobApplicationAttachmentDto> Attachments { get; init; } = Array.Empty<AdminJobApplicationAttachmentDto>();
 }
 
 public class AdminHttpRequestLogListItemDto
@@ -237,4 +354,52 @@ public sealed class AdminContentOverviewDto
 
     [JsonPropertyName("locales")]
     public IReadOnlyList<AdminContentLocaleRowDto> Locales { get; init; } = Array.Empty<AdminContentLocaleRowDto>();
+}
+
+public sealed class AdminContentStringRowDto
+{
+    [JsonPropertyName("key")]
+    public string Key { get; init; } = string.Empty;
+
+    [JsonPropertyName("value")]
+    public string Value { get; init; } = string.Empty;
+}
+
+public sealed class AdminContentLocaleDetailDto
+{
+    [JsonPropertyName("locale")]
+    public string Locale { get; init; } = string.Empty;
+
+    [JsonPropertyName("items")]
+    public IReadOnlyList<AdminContentStringRowDto> Items { get; init; } = Array.Empty<AdminContentStringRowDto>();
+}
+
+public sealed class AdminContentBulkUpsertRequestDto
+{
+    [JsonPropertyName("locale")]
+    public string Locale { get; init; } = string.Empty;
+
+    [JsonPropertyName("items")]
+    public IReadOnlyList<AdminContentStringRowDto> Items { get; init; } = Array.Empty<AdminContentStringRowDto>();
+}
+
+public sealed class AdminContentAuditRowDto
+{
+    [JsonPropertyName("id")]
+    public Guid Id { get; init; }
+
+    [JsonPropertyName("occurredAtUtc")]
+    public DateTime OccurredAtUtc { get; init; }
+
+    [JsonPropertyName("path")]
+    public string Path { get; init; } = string.Empty;
+
+    [JsonPropertyName("statusCode")]
+    public int StatusCode { get; init; }
+
+    [JsonPropertyName("userEmail")]
+    public string? UserEmail { get; init; }
+
+    [JsonPropertyName("actionTitle")]
+    public string? ActionTitle { get; init; }
 }

@@ -1,3 +1,4 @@
+using CoreService.Application.Domain.Entities;
 using CoreService.Audit.Domain.Entities;
 using CoreService.Auth.Domain.Entities;
 using CoreService.Contact.Domain.Entities;
@@ -11,6 +12,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ContactMessage> ContactMessages => Set<ContactMessage>();
 
     public DbSet<ContactAttachment> ContactAttachments => Set<ContactAttachment>();
+
+    public DbSet<JobApplication> JobApplications => Set<JobApplication>();
+
+    public DbSet<JobApplicationAttachment> JobApplicationAttachments => Set<JobApplicationAttachment>();
+
+    public DbSet<JobPosition> JobPositions => Set<JobPosition>();
 
     public DbSet<SiteContentBundleEntity> SiteContentBundles => Set<SiteContentBundleEntity>();
 

@@ -1,4 +1,5 @@
 using CoreService.Admin;
+using CoreService.Application;
 using CoreService.Audit;
 using CoreService.Auth;
 using CoreService.Auth.Services;
@@ -70,6 +71,7 @@ builder.Services.AddPersistence(builder.Configuration);
 builder.Services.AddAuthFeature(builder.Configuration);
 builder.Services.AddAuditFeature(builder.Configuration);
 builder.Services.AddContactFeature(builder.Configuration);
+builder.Services.AddApplicationFeature(builder.Configuration);
 builder.Services.AddContentFeature();
 builder.Services.AddAdminFeature();
 

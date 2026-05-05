@@ -1,4 +1,5 @@
 using CoreService.Audit.Attributes;
+using CoreService.Common;
 using CoreService.Content.DTOs.Responses;
 using CoreService.Content.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -32,10 +33,7 @@ public class ContentController(ISiteContentService siteContentService, ILogger<C
         catch (Exception ex)
         {
             logger.LogError(ex, "Site içeriği getirilirken hata: Locale={Locale}", locale);
-            return Problem(
-                title: "Site içeriği getirilirken bir hata oluştu.",
-                statusCode: StatusCodes.Status500InternalServerError,
-                extensions: new Dictionary<string, object?> { ["errorCode"] = "Content.SiteReadFailed" });
+            return this.ProblemFromCatalog(ProblemCatalog.Content.SiteReadFailed, ex.Message);
         }
     }
 }
