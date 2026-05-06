@@ -84,19 +84,45 @@ public class ApplicationRepository(AppDbContext db) : IApplicationRepository
         };
 
         var total = await q.CountAsync(cancellationToken).ConfigureAwait(false);
-        var items = await q
+        var pageRows = await q
             .Skip(skip)
             .Take(take)
-            .Select(a => new JobApplicationListRow(
+            .Select(a => new
+            {
                 a.Id,
                 a.FullName,
                 a.Email,
                 a.Phone,
                 a.Position,
                 a.CreatedAtUtc,
-                a.Attachments.Count))
+            })
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
+
+        if (pageRows.Count == 0)
+        {
+            return ([], total);
+        }
+
+        var pageIds = pageRows.Select(x => x.Id).ToList();
+        var attachmentCounts = await db.JobApplicationAttachments
+            .AsNoTracking()
+            .Where(a => pageIds.Contains(a.JobApplicationId))
+            .GroupBy(a => a.JobApplicationId)
+            .Select(g => new { JobApplicationId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.JobApplicationId, x => x.Count, cancellationToken)
+            .ConfigureAwait(false);
+
+        var items = pageRows
+            .Select(x => new JobApplicationListRow(
+                x.Id,
+                x.FullName,
+                x.Email,
+                x.Phone,
+                x.Position,
+                x.CreatedAtUtc,
+                attachmentCounts.GetValueOrDefault(x.Id, 0)))
+            .ToList();
         return (items, total);
     }
 
