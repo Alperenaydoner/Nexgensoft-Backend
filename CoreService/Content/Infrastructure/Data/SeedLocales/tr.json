@@ -122,7 +122,15 @@
       "NotFound": "Başvuru kodu bulunamadı.",
       "FullNameRequired": "Ad ve soyad birlikte girilmelidir.",
       "FullNameMeaningful": "Lütfen gerçek ve anlamlı bir ad soyad girin.",
-      "EmailMeaningful": "Lütfen gerçek bir e-posta adresi girin."
+      "EmailMeaningful": "Lütfen gerçek bir e-posta adresi girin.",
+      "CoverLetterRequired": "Ön yazı zorunludur.",
+      "CoverLetterMinLength": "Ön yazı en az 10 karakter olmalıdır.",
+      "PositionRequired": "Pozisyon seçilmelidir.",
+      "AttachmentsMinCount": "En az 3 dosya yüklemelisiniz (CV, ek veya video dahil).",
+      "AttachmentsTooMany": "İzin verilen azami dosya sayısı aşıldı.",
+      "AttachmentExtensionNotAllowed": "Bu dosya türüne izin verilmiyor.",
+      "AttachmentInvalidPayload": "Dosya verisi geçersiz.",
+      "AttachmentTooLarge": "Bir dosya izin verilen boyutu aşıyor."
     }
   },
   "admin": {

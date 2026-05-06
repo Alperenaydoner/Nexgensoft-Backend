@@ -41,9 +41,11 @@ public class ApplicationSubmitRequest
     [JsonPropertyName("position")]
     public string Position { get; set; } = string.Empty;
 
+    [Required]
+    [MinLength(10)]
     [MaxLength(8000)]
     [JsonPropertyName("coverLetter")]
-    public string? CoverLetter { get; set; }
+    public string CoverLetter { get; set; } = string.Empty;
 
     [JsonPropertyName("attachments")]
     public List<ApplicationAttachmentSubmitDto>? Attachments { get; set; }

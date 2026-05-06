@@ -28,7 +28,8 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 
 builder.WebHost.ConfigureKestrel(o =>
 {
-    o.Limits.MaxRequestBodySize = 100 * 1024 * 1024;
+    // Başvuru: birden fazla video (base64) için gövde üst sınırı (~50 MB × 3 dosya × base64 şişmesi).
+    o.Limits.MaxRequestBodySize = 250 * 1024 * 1024;
 });
 
 var corsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();

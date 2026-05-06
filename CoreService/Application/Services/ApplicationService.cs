@@ -54,6 +54,14 @@ public class ApplicationService(
             return (null, errors);
         }
 
+        if (attachments.Count < options.MinFilesPerApplication)
+        {
+            return (null, new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["attachments"] = ["Validation.Application.AttachmentsMinCount"],
+            });
+        }
+
         var application = new JobApplication
         {
             Id = Guid.NewGuid(),
@@ -61,7 +69,7 @@ public class ApplicationService(
             Email = request.Email.Trim(),
             Phone = string.IsNullOrWhiteSpace(request.Phone) ? null : request.Phone.Trim(),
             Position = request.Position.Trim(),
-            CoverLetter = string.IsNullOrWhiteSpace(request.CoverLetter) ? null : request.CoverLetter.Trim(),
+            CoverLetter = request.CoverLetter.Trim(),
             CreatedAtUtc = DateTime.UtcNow,
         };
 
@@ -79,13 +87,6 @@ public class ApplicationService(
         ApplicationUpdateByCodeRequest request,
         CancellationToken cancellationToken = default)
     {
-        var options = uploadOptions.Value;
-        var (attachments, errors) = TryBuildAttachments(request.Attachments, options);
-        if (errors is not null)
-        {
-            return (null, errors);
-        }
-
         var application = await repository.GetApplicationByIdForUpdateAsync(applicationCode, cancellationToken);
         if (application is null)
         {
@@ -120,6 +121,45 @@ public class ApplicationService(
             application.CoverLetter = string.IsNullOrWhiteSpace(request.CoverLetter) ? null : request.CoverLetter.Trim();
         }
 
+        var options = uploadOptions.Value;
+        var (attachments, buildErrors) = TryBuildAttachments(request.Attachments, options);
+        if (buildErrors is not null)
+        {
+            return (null, buildErrors);
+        }
+
+        if (attachments.Count > 0 && attachments.Count < options.MinFilesPerApplication)
+        {
+            return (null, new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["attachments"] = ["Validation.Application.AttachmentsMinCount"],
+            });
+        }
+
+        if (string.IsNullOrWhiteSpace(application.CoverLetter))
+        {
+            return (null, new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["coverLetter"] = ["Validation.Application.CoverLetterRequired"],
+            });
+        }
+
+        if (application.CoverLetter.Length < 10)
+        {
+            return (null, new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["coverLetter"] = ["Validation.Application.CoverLetterMinLength"],
+            });
+        }
+
+        if (string.IsNullOrWhiteSpace(application.Position))
+        {
+            return (null, new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["position"] = ["Validation.Application.PositionRequired"],
+            });
+        }
+
         var updateQualityErrors = ApplicantContentValidationHelper.ValidateFullNameAndEmail(application.FullName, application.Email);
         if (updateQualityErrors is not null)
         {
@@ -144,7 +184,7 @@ public class ApplicationService(
         var list = items?.Where(static a => !string.IsNullOrWhiteSpace(a.Base64)).ToList() ?? [];
         if (list.Count > options.MaxFilesPerApplication)
         {
-            errors["attachments"] = [$"At most {options.MaxFilesPerApplication} file(s) allowed."];
+            errors["attachments"] = ["Validation.Application.AttachmentsTooMany"];
             return ([], errors);
         }
 
@@ -155,7 +195,7 @@ public class ApplicationService(
             var ext = Path.GetExtension(item.FileName);
             if (string.IsNullOrEmpty(ext) || !allowed.Contains(ext))
             {
-                errors["attachments"] = [$"File type not allowed: {ext}"];
+                errors["attachments"] = ["Validation.Application.AttachmentExtensionNotAllowed"];
                 return ([], errors);
             }
 
@@ -167,13 +207,13 @@ public class ApplicationService(
             }
             catch (FormatException)
             {
-                errors["attachments"] = ["Invalid Base64 payload."];
+                errors["attachments"] = ["Validation.Application.AttachmentInvalidPayload"];
                 return ([], errors);
             }
 
             if (bytes.LongLength > options.MaxBytesPerFile)
             {
-                errors["attachments"] = [$"File exceeds maximum decoded size ({options.MaxBytesPerFile} bytes)."];
+                errors["attachments"] = ["Validation.Application.AttachmentTooLarge"];
                 return ([], errors);
             }
 
