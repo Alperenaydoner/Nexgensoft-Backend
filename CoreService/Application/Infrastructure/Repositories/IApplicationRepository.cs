@@ -2,6 +2,15 @@ using CoreService.Application.Domain.Entities;
 
 namespace CoreService.Application.Infrastructure.Repositories;
 
+public sealed record JobApplicationListRow(
+    Guid Id,
+    string FullName,
+    string Email,
+    string? Phone,
+    string Position,
+    DateTime CreatedAtUtc,
+    int AttachmentCount);
+
 public interface IApplicationRepository
 {
     Task AddApplicationWithAttachmentsAsync(
@@ -13,7 +22,7 @@ public interface IApplicationRepository
 
     Task<int> CountAttachmentsAsync(CancellationToken cancellationToken = default);
 
-    Task<(IReadOnlyList<JobApplication> Items, int TotalCount)> GetApplicationsPagedAsync(
+    Task<(IReadOnlyList<JobApplicationListRow> Items, int TotalCount)> GetApplicationsPagedAsync(
         int skip,
         int take,
         string? query,

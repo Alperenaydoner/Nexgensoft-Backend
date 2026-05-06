@@ -342,7 +342,7 @@ public class AdminDashboardService(
             Phone = a.Phone,
             Position = a.Position,
             CreatedAtUtc = a.CreatedAtUtc,
-            AttachmentCount = a.Attachments.Count,
+            AttachmentCount = a.AttachmentCount,
         }).ToList();
         return PagedResult<AdminJobApplicationListItemDto>.Create(dtos, pr, total);
     }

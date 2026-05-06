@@ -26,7 +26,7 @@ public class ApplicationRepository(AppDbContext db) : IApplicationRepository
     public Task<int> CountAttachmentsAsync(CancellationToken cancellationToken = default) =>
         db.JobApplicationAttachments.AsNoTracking().CountAsync(cancellationToken);
 
-    public async Task<(IReadOnlyList<JobApplication> Items, int TotalCount)> GetApplicationsPagedAsync(
+    public async Task<(IReadOnlyList<JobApplicationListRow> Items, int TotalCount)> GetApplicationsPagedAsync(
         int skip,
         int take,
         string? query,
@@ -87,7 +87,14 @@ public class ApplicationRepository(AppDbContext db) : IApplicationRepository
         var items = await q
             .Skip(skip)
             .Take(take)
-            .Include(a => a.Attachments)
+            .Select(a => new JobApplicationListRow(
+                a.Id,
+                a.FullName,
+                a.Email,
+                a.Phone,
+                a.Position,
+                a.CreatedAtUtc,
+                a.Attachments.Count))
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
         return (items, total);
