@@ -268,11 +268,12 @@ public class AdminController(IAdminDashboardService dashboard) : ControllerBase
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 25,
         [FromQuery] int? statusCode = null,
+        [FromQuery] string? httpMethod = null,
         [FromQuery] string? pathContains = null,
         [FromQuery] DateTime? fromUtc = null,
         [FromQuery] DateTime? toUtc = null,
         CancellationToken cancellationToken = default) =>
-        Ok(await dashboard.GetHttpRequestLogsAsync(page, pageSize, statusCode, pathContains, fromUtc, toUtc, cancellationToken));
+        Ok(await dashboard.GetHttpRequestLogsAsync(page, pageSize, statusCode, httpMethod, pathContains, fromUtc, toUtc, cancellationToken));
 
     [HttpGet("audit/logs/{id:guid}")]
     [ProducesResponseType(typeof(AdminHttpRequestLogDetailDto), StatusCodes.Status200OK)]

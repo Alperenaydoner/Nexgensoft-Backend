@@ -17,8 +17,12 @@ public class AppUserConfiguration : IEntityTypeConfiguration<AppUser>
         builder.Property(x => x.PasswordHash).HasMaxLength(200).IsRequired();
         builder.Property(x => x.DisplayName).HasMaxLength(200).IsRequired();
         builder.Property(x => x.IsActive).IsRequired();
+        builder.Property(x => x.IsDeleted).IsRequired();
         builder.Property(x => x.CreatedAtUtc).IsRequired();
 
         builder.HasIndex(x => x.NormalizedEmail).IsUnique();
+        builder.HasIndex(x => x.CreatedAtUtc);
+        builder.HasIndex(x => new { x.IsActive, x.IsDeleted });
+        builder.HasIndex(x => x.UserId);
     }
 }

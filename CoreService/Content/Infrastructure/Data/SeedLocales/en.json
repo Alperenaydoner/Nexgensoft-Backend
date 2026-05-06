@@ -114,6 +114,17 @@
     "mapTitle": "Istanbul, Kadıköy — location",
     "ctaContact": "Go to contact form"
   },
+  "RateLimit": {
+    "TooManyRequests": "Too many requests. Please try again shortly."
+  },
+  "Validation": {
+    "Application": {
+      "NotFound": "Application code was not found.",
+      "FullNameRequired": "Please provide both name and surname.",
+      "FullNameMeaningful": "Please enter a real and meaningful full name.",
+      "EmailMeaningful": "Please enter a real email address."
+    }
+  },
   "admin": {
     "title": "Admin",
     "sidebarAria": "Admin navigation",

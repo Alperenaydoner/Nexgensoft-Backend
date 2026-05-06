@@ -1,12 +1,11 @@
 using System.ComponentModel.DataAnnotations;
+using CoreService.Common;
 
 namespace CoreService.Content.Domain.Entities;
 
 /// <summary>Statik metin satırı — Mapa StaticText benzeri Key + Content + dil.</summary>
-public class SiteLocalizedStringEntity
+public class SiteLocalizedStringEntity : BaseEntity<int>
 {
-    public int Id { get; set; }
-
     /// <summary>tr, en</summary>
     [Required]
     [MaxLength(10)]

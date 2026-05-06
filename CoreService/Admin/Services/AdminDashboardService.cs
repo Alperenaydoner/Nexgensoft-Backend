@@ -398,6 +398,7 @@ public class AdminDashboardService(
         int page,
         int pageSize,
         int? statusCode,
+        string? httpMethod,
         string? pathContains,
         DateTime? fromUtc,
         DateTime? toUtc,
@@ -405,7 +406,7 @@ public class AdminDashboardService(
     {
         var pr = new PageRequest(page, pageSize);
         var (items, total) = await httpLogs
-            .GetPagedAsync(pr.Skip, pr.PageSize, statusCode, pathContains, fromUtc, toUtc, cancellationToken)
+            .GetPagedAsync(pr.Skip, pr.PageSize, statusCode, httpMethod, pathContains, fromUtc, toUtc, cancellationToken)
             .ConfigureAwait(false);
         var dtos = items.Select(MapLogListItem).ToList();
         return PagedResult<AdminHttpRequestLogListItemDto>.Create(dtos, pr, total);
@@ -550,6 +551,7 @@ public class AdminDashboardService(
         var (items, _) = await httpLogs.GetPagedAsync(
             0,
             Math.Clamp(take, 1, 100),
+            null,
             null,
             "content",
             null,

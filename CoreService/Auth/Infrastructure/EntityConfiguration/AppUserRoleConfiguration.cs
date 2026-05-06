@@ -12,6 +12,10 @@ public class AppUserRoleConfiguration : IEntityTypeConfiguration<AppUserRole>
 
         builder.HasKey(x => new { x.UserId, x.RoleId });
 
+        builder.Property(x => x.CreatedAtUtc).IsRequired();
+        builder.Property(x => x.IsActive).IsRequired();
+        builder.Property(x => x.IsDeleted).IsRequired();
+
         builder.HasOne(x => x.User)
             .WithMany(u => u.UserRoles)
             .HasForeignKey(x => x.UserId)
@@ -21,5 +25,8 @@ public class AppUserRoleConfiguration : IEntityTypeConfiguration<AppUserRole>
             .WithMany(r => r.UserRoles)
             .HasForeignKey(x => x.RoleId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasIndex(x => x.RoleId);
+        builder.HasIndex(x => new { x.IsActive, x.IsDeleted });
     }
 }

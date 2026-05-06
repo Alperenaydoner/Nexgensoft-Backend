@@ -84,6 +84,7 @@ public interface IAdminDashboardService
         int page,
         int pageSize,
         int? statusCode,
+        string? httpMethod,
         string? pathContains,
         DateTime? fromUtc,
         DateTime? toUtc,

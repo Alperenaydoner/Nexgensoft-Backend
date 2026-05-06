@@ -3,6 +3,8 @@ using CoreService.Application;
 using CoreService.Audit;
 using CoreService.Auth;
 using CoreService.Auth.Services;
+using CoreService.Common;
+using CoreService.Common.Localization;
 using CoreService.Contact;
 using CoreService.Content;
 using CoreService.Content.Infrastructure;
@@ -12,6 +14,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -74,6 +77,38 @@ builder.Services.AddContactFeature(builder.Configuration);
 builder.Services.AddApplicationFeature(builder.Configuration);
 builder.Services.AddContentFeature();
 builder.Services.AddAdminFeature();
+builder.Services.AddSingleton<IApiTextLocalizer, JsonApiTextLocalizer>();
+
+builder.Services.AddRateLimiter(options =>
+{
+    var permitLimit = builder.Configuration.GetValue("RateLimiting:IpFixedWindow:PermitLimit", 60);
+    var windowSeconds = builder.Configuration.GetValue("RateLimiting:IpFixedWindow:WindowSeconds", 60);
+    var queueLimit = builder.Configuration.GetValue("RateLimiting:IpFixedWindow:QueueLimit", 0);
+
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (context, token) =>
+    {
+        var localizer = context.HttpContext.RequestServices.GetRequiredService<IApiTextLocalizer>();
+        var payload = ApiResult<string>.Fail(localizer.Get("RateLimit.TooManyRequests"));
+        context.HttpContext.Response.ContentType = "application/json";
+        await context.HttpContext.Response.WriteAsJsonAsync(payload, cancellationToken: token);
+    };
+
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+    {
+        var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown-ip";
+        return RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: ip,
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = permitLimit,
+                Window = TimeSpan.FromSeconds(windowSeconds),
+                QueueLimit = queueLimit,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                AutoReplenishment = true,
+            });
+    });
+});
 
 var supported = new[] { "tr", "en" };
 builder.Services.Configure<RequestLocalizationOptions>(o =>
@@ -125,6 +160,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseRouting();
+app.UseRateLimiter();
 
 if (useConfiguredCors || app.Environment.IsDevelopment())
 {

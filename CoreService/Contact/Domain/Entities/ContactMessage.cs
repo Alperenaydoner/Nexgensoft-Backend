@@ -1,9 +1,9 @@
+using CoreService.Common;
+
 namespace CoreService.Contact.Domain.Entities;
 
-public class ContactMessage
+public class ContactMessage : BaseEntity
 {
-    public Guid Id { get; set; }
-
     public string FullName { get; set; } = string.Empty;
 
     public string Email { get; set; } = string.Empty;
@@ -11,8 +11,6 @@ public class ContactMessage
     public string? Company { get; set; }
 
     public string Message { get; set; } = string.Empty;
-
-    public DateTime CreatedAtUtc { get; set; }
 
     public ICollection<ContactAttachment> Attachments { get; set; } = new List<ContactAttachment>();
 }

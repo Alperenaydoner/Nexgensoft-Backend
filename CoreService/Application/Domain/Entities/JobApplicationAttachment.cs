@@ -1,9 +1,9 @@
+using CoreService.Common;
+
 namespace CoreService.Application.Domain.Entities;
 
-public class JobApplicationAttachment
+public class JobApplicationAttachment : BaseEntity
 {
-    public Guid Id { get; set; }
-
     public Guid JobApplicationId { get; set; }
 
     public string OriginalFileName { get; set; } = string.Empty;

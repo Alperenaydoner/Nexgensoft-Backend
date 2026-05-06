@@ -1,7 +1,9 @@
 using CoreService.Application.Domain.Entities;
 using CoreService.Application.DTOs;
 using CoreService.Application.DTOs.Requests;
+using CoreService.Application.DTOs.Responses;
 using CoreService.Application.Infrastructure.Repositories;
+using CoreService.Common.Validation;
 using Microsoft.Extensions.Options;
 
 namespace CoreService.Application.Services;
@@ -16,10 +18,35 @@ public class ApplicationService(
         return items.Count > 0 ? items : ["Asistan", "Sofor", "Yazilim Gelistirici"];
     }
 
+    public async Task<ApplicationByCodeResponse?> GetByCodeAsync(Guid applicationCode, CancellationToken cancellationToken = default)
+    {
+        var application = await repository.GetApplicationWithAttachmentsByIdAsync(applicationCode, cancellationToken);
+        if (application is null)
+        {
+            return null;
+        }
+
+        return new ApplicationByCodeResponse
+        {
+            ApplicationCode = application.Id,
+            FullName = application.FullName,
+            Email = application.Email,
+            Phone = application.Phone,
+            Position = application.Position,
+            CoverLetter = application.CoverLetter,
+        };
+    }
+
     public async Task<(Guid? ApplicationId, IDictionary<string, string[]>? ValidationErrors)> SubmitAsync(
         ApplicationSubmitRequest request,
         CancellationToken cancellationToken = default)
     {
+        var qualityErrors = ApplicantContentValidationHelper.ValidateFullNameAndEmail(request.FullName, request.Email);
+        if (qualityErrors is not null)
+        {
+            return (null, qualityErrors);
+        }
+
         var options = uploadOptions.Value;
         var (attachments, errors) = TryBuildAttachments(request.Attachments, options);
         if (errors is not null)
@@ -44,6 +71,68 @@ public class ApplicationService(
         }
 
         await repository.AddApplicationWithAttachmentsAsync(application, attachments, cancellationToken);
+        return (application.Id, null);
+    }
+
+    public async Task<(Guid? ApplicationId, IDictionary<string, string[]>? ValidationErrors)> UpdateByCodeAsync(
+        Guid applicationCode,
+        ApplicationUpdateByCodeRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var options = uploadOptions.Value;
+        var (attachments, errors) = TryBuildAttachments(request.Attachments, options);
+        if (errors is not null)
+        {
+            return (null, errors);
+        }
+
+        var application = await repository.GetApplicationByIdForUpdateAsync(applicationCode, cancellationToken);
+        if (application is null)
+        {
+            return (null, new Dictionary<string, string[]>
+            {
+                ["applicationCode"] = ["Validation.Application.NotFound"],
+            });
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.FullName))
+        {
+            application.FullName = request.FullName.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Email))
+        {
+            application.Email = request.Email.Trim();
+        }
+
+        if (request.Phone is not null)
+        {
+            application.Phone = string.IsNullOrWhiteSpace(request.Phone) ? null : request.Phone.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Position))
+        {
+            application.Position = request.Position.Trim();
+        }
+
+        if (request.CoverLetter is not null)
+        {
+            application.CoverLetter = string.IsNullOrWhiteSpace(request.CoverLetter) ? null : request.CoverLetter.Trim();
+        }
+
+        var updateQualityErrors = ApplicantContentValidationHelper.ValidateFullNameAndEmail(application.FullName, application.Email);
+        if (updateQualityErrors is not null)
+        {
+            return (null, updateQualityErrors);
+        }
+
+        foreach (var attachment in attachments)
+        {
+            attachment.JobApplicationId = application.Id;
+            application.Attachments.Add(attachment);
+        }
+
+        await repository.SaveChangesAsync(cancellationToken);
         return (application.Id, null);
     }
 

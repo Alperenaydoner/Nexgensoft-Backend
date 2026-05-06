@@ -27,6 +27,10 @@ public interface IApplicationRepository
 
     Task<JobApplication?> GetApplicationWithAttachmentsByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
+    Task<JobApplication?> GetApplicationByIdForUpdateAsync(Guid id, CancellationToken cancellationToken = default);
+
+    Task SaveChangesAsync(CancellationToken cancellationToken = default);
+
     Task<JobApplicationAttachment?> GetAttachmentByIdAsync(Guid attachmentId, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<string>> GetActivePositionNamesAsync(CancellationToken cancellationToken = default);

@@ -12,6 +12,7 @@ public interface IHttpRequestLogRepository
         int skip,
         int take,
         int? statusCode,
+        string? httpMethod,
         string? pathContains,
         DateTime? fromUtc,
         DateTime? toUtc,

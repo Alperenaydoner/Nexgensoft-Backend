@@ -1,9 +1,9 @@
+using CoreService.Common;
+
 namespace CoreService.Contact.Domain.Entities;
 
-public class ContactAttachment
+public class ContactAttachment : BaseEntity
 {
-    public Guid Id { get; set; }
-
     public Guid ContactMessageId { get; set; }
 
     public ContactMessage ContactMessage { get; set; } = null!;

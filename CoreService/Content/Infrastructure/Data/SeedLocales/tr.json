@@ -114,6 +114,17 @@
     "mapTitle": "İstanbul Kadıköy — konum",
     "ctaContact": "İletişim formuna git"
   },
+  "RateLimit": {
+    "TooManyRequests": "Çok fazla istek gönderdiniz. Lütfen biraz sonra tekrar deneyin."
+  },
+  "Validation": {
+    "Application": {
+      "NotFound": "Başvuru kodu bulunamadı.",
+      "FullNameRequired": "Ad ve soyad birlikte girilmelidir.",
+      "FullNameMeaningful": "Lütfen gerçek ve anlamlı bir ad soyad girin.",
+      "EmailMeaningful": "Lütfen gerçek bir e-posta adresi girin."
+    }
+  },
   "admin": {
     "title": "Yönetim",
     "sidebarAria": "Yönetim menüsü",

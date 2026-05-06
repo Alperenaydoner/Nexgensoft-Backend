@@ -48,3 +48,30 @@ public class ApplicationSubmitRequest
     [JsonPropertyName("attachments")]
     public List<ApplicationAttachmentSubmitDto>? Attachments { get; set; }
 }
+
+public class ApplicationUpdateByCodeRequest
+{
+    [MaxLength(200)]
+    [JsonPropertyName("fullName")]
+    public string? FullName { get; set; }
+
+    [EmailAddress]
+    [MaxLength(320)]
+    [JsonPropertyName("email")]
+    public string? Email { get; set; }
+
+    [MaxLength(32)]
+    [JsonPropertyName("phone")]
+    public string? Phone { get; set; }
+
+    [MaxLength(200)]
+    [JsonPropertyName("position")]
+    public string? Position { get; set; }
+
+    [MaxLength(8000)]
+    [JsonPropertyName("coverLetter")]
+    public string? CoverLetter { get; set; }
+
+    [JsonPropertyName("attachments")]
+    public List<ApplicationAttachmentSubmitDto>? Attachments { get; set; }
+}

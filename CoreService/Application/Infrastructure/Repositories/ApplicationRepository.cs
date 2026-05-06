@@ -98,6 +98,14 @@ public class ApplicationRepository(AppDbContext db) : IApplicationRepository
             .Include(a => a.Attachments)
             .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
 
+    public Task<JobApplication?> GetApplicationByIdForUpdateAsync(Guid id, CancellationToken cancellationToken = default) =>
+        db.JobApplications
+            .Include(a => a.Attachments)
+            .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
+
+    public Task SaveChangesAsync(CancellationToken cancellationToken = default) =>
+        db.SaveChangesAsync(cancellationToken);
+
     public Task<JobApplicationAttachment?> GetAttachmentByIdAsync(Guid attachmentId, CancellationToken cancellationToken = default) =>
         db.JobApplicationAttachments.AsNoTracking()
             .FirstOrDefaultAsync(a => a.Id == attachmentId, cancellationToken);

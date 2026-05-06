@@ -44,6 +44,10 @@ public class HttpRequestLogConfiguration : IEntityTypeConfiguration<HttpRequestL
 
         builder.HasIndex(x => x.OccurredAtUtc);
         builder.HasIndex(x => x.ClientIp);
+        builder.HasIndex(x => x.HttpMethod);
+        builder.HasIndex(x => x.StatusCode);
+        builder.HasIndex(x => new { x.HttpMethod, x.OccurredAtUtc });
+        builder.HasIndex(x => new { x.StatusCode, x.OccurredAtUtc });
         builder.HasIndex(x => new { x.Path, x.OccurredAtUtc });
         builder.HasIndex(x => x.ActionType);
     }

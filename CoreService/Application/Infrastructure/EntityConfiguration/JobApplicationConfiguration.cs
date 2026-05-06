@@ -1,4 +1,5 @@
 using CoreService.Application.Domain.Entities;
+using CoreService.Auth.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -16,5 +17,19 @@ public class JobApplicationConfiguration : IEntityTypeConfiguration<JobApplicati
         builder.Property(x => x.Position).HasMaxLength(200).IsRequired();
         builder.Property(x => x.CoverLetter).HasMaxLength(8000);
         builder.Property(x => x.CreatedAtUtc).IsRequired();
+        builder.Property(x => x.IsActive).IsRequired();
+        builder.Property(x => x.IsDeleted).IsRequired();
+
+        builder.HasOne<AppUser>()
+            .WithMany()
+            .HasForeignKey(x => x.UserId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasIndex(x => x.CreatedAtUtc);
+        builder.HasIndex(x => x.Position);
+        builder.HasIndex(x => new { x.Position, x.CreatedAtUtc });
+        builder.HasIndex(x => x.Email);
+        builder.HasIndex(x => new { x.IsActive, x.IsDeleted });
+        builder.HasIndex(x => x.UserId);
     }
 }

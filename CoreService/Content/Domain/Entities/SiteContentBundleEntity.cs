@@ -1,13 +1,13 @@
+using CoreService.Common;
+
 namespace CoreService.Content.Domain.Entities;
 
 /// <summary>
 /// Tek satır = bir yerel ayar için tüm site içerik paketi (<c>SiteContentBundle</c> JSON).
 /// Nav / sayfa / blok ayrı tablolar yerine parametrik payload.
 /// </summary>
-public class SiteContentBundleEntity
+public class SiteContentBundleEntity : BaseEntity<int>
 {
-    public int Id { get; set; }
-
     /// <summary>tr, en</summary>
     public string Locale { get; set; } = string.Empty;
 

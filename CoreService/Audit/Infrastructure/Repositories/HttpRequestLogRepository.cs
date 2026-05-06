@@ -19,6 +19,7 @@ public class HttpRequestLogRepository(AppDbContext db) : IHttpRequestLogReposito
         int skip,
         int take,
         int? statusCode,
+        string? httpMethod,
         string? pathContains,
         DateTime? fromUtc,
         DateTime? toUtc,
@@ -28,6 +29,12 @@ public class HttpRequestLogRepository(AppDbContext db) : IHttpRequestLogReposito
         if (statusCode is { } sc)
         {
             q = q.Where(x => x.StatusCode == sc);
+        }
+
+        if (!string.IsNullOrWhiteSpace(httpMethod))
+        {
+            var normalizedMethod = httpMethod.Trim().ToUpperInvariant();
+            q = q.Where(x => x.HttpMethod == normalizedMethod);
         }
 
         if (!string.IsNullOrWhiteSpace(pathContains))
