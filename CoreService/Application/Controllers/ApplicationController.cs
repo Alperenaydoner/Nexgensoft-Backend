@@ -59,13 +59,10 @@ public class ApplicationController(
             return ValidationProblem(ModelState);
         }
 
-        var (applicationId, validationErrors) = await applicationService.SubmitAsync(body, cancellationToken);
-        if (validationErrors is not null)
-        {
-            return ValidationProblem(new ValidationProblemDetails(LocalizeValidationErrors(validationErrors)));
-        }
-
-        return Ok(ApiResult<Guid>.Ok(applicationId!.Value));
+        var result = await applicationService.SubmitAsync(body, cancellationToken);
+        return this.FromOperationResult(
+            result,
+            errors => LocalizeValidationErrors(errors.ToDictionary(x => x.Key, x => x.Value, StringComparer.OrdinalIgnoreCase)));
     }
 
     [HttpPut("{applicationCode:guid}")]
@@ -84,13 +81,10 @@ public class ApplicationController(
             return ValidationProblem(ModelState);
         }
 
-        var (applicationId, validationErrors) = await applicationService.UpdateByCodeAsync(applicationCode, body, cancellationToken);
-        if (validationErrors is not null)
-        {
-            return ValidationProblem(new ValidationProblemDetails(LocalizeValidationErrors(validationErrors)));
-        }
-
-        return Ok(ApiResult<Guid>.Ok(applicationId!.Value));
+        var result = await applicationService.UpdateByCodeAsync(applicationCode, body, cancellationToken);
+        return this.FromOperationResult(
+            result,
+            errors => LocalizeValidationErrors(errors.ToDictionary(x => x.Key, x => x.Value, StringComparer.OrdinalIgnoreCase)));
     }
 
     private Dictionary<string, string[]> LocalizeValidationErrors(IDictionary<string, string[]> source)

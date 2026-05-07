@@ -131,6 +131,21 @@
       "AttachmentExtensionNotAllowed": "Bu dosya türüne izin verilmiyor.",
       "AttachmentInvalidPayload": "Dosya verisi geçersiz.",
       "AttachmentTooLarge": "Bir dosya izin verilen boyutu aşıyor."
+    },
+    "Admin": {
+      "Users": {
+        "EmailRequired": "E-posta zorunludur.",
+        "EmailAlreadyExists": "Bu e-posta zaten kullanımda.",
+        "PasswordRequired": "Parola zorunludur."
+      },
+      "Roles": {
+        "NameRequired": "Rol adı zorunludur.",
+        "AlreadyExists": "Bu rol zaten mevcut."
+      },
+      "Content": {
+        "LocaleRequired": "Dil (locale) zorunludur.",
+        "DuplicateKeysPrefix": "Tekrarlanan anahtarlar:"
+      }
     }
   },
   "admin": {

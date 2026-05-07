@@ -1,6 +1,7 @@
 using CoreService.Admin.DTOs;
 using CoreService.Admin.Services;
 using CoreService.Common;
+using CoreService.Common.Localization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,7 +11,7 @@ namespace CoreService.Admin.Controllers;
 [Route("api/v1/admin")]
 [Authorize(Roles = "Admin")]
 [Produces("application/json")]
-public class AdminController(IAdminDashboardService dashboard) : ControllerBase
+public class AdminController(IAdminDashboardService dashboard, IApiTextLocalizer textLocalizer) : ControllerBase
 {
     [HttpGet("ping")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -76,15 +77,14 @@ public class AdminController(IAdminDashboardService dashboard) : ControllerBase
         [FromBody] AdminUserUpsertRequestDto request,
         CancellationToken cancellationToken)
     {
-        try
+        var result = await dashboard.CreateUserAsync(request, cancellationToken);
+        if (!result.Success)
         {
-            var created = await dashboard.CreateUserAsync(request, cancellationToken);
-            return CreatedAtAction(nameof(GetUserAsync), new { id = created.Id }, created);
+            return this.FromOperationResultError(result, LocalizeValidationErrors);
         }
-        catch (InvalidOperationException ex)
-        {
-            return this.ProblemFromCatalog(ProblemCatalog.Admin.UsersCreateValidation, ex.Message);
-        }
+
+        var created = result.Data!;
+        return CreatedAtAction(nameof(GetUserAsync), new { id = created.Id }, created);
     }
 
     [HttpPut("users/{id:guid}")]
@@ -96,15 +96,13 @@ public class AdminController(IAdminDashboardService dashboard) : ControllerBase
         [FromBody] AdminUserUpsertRequestDto request,
         CancellationToken cancellationToken)
     {
-        try
+        var result = await dashboard.UpdateUserAsync(id, request, cancellationToken);
+        if (!result.Success)
         {
-            var updated = await dashboard.UpdateUserAsync(id, request, cancellationToken);
-            return updated is null ? NotFound() : Ok(updated);
+            return this.FromOperationResultError(result, LocalizeValidationErrors);
         }
-        catch (InvalidOperationException ex)
-        {
-            return this.ProblemFromCatalog(ProblemCatalog.Admin.UsersUpdateValidation, ex.Message);
-        }
+
+        return result.Data is null ? NotFound() : Ok(result.Data);
     }
 
     [HttpDelete("users/{id:guid}")]
@@ -133,15 +131,13 @@ public class AdminController(IAdminDashboardService dashboard) : ControllerBase
         [FromBody] AdminRoleUpsertRequestDto request,
         CancellationToken cancellationToken)
     {
-        try
+        var result = await dashboard.CreateRoleAsync(request, cancellationToken);
+        if (!result.Success)
         {
-            var created = await dashboard.CreateRoleAsync(request, cancellationToken);
-            return StatusCode(StatusCodes.Status201Created, created);
+            return this.FromOperationResultError(result, LocalizeValidationErrors);
         }
-        catch (InvalidOperationException ex)
-        {
-            return this.ProblemFromCatalog(ProblemCatalog.Admin.RolesCreateValidation, ex.Message);
-        }
+
+        return StatusCode(StatusCodes.Status201Created, result.Data);
     }
 
     [HttpPut("roles/{id:guid}")]
@@ -153,15 +149,13 @@ public class AdminController(IAdminDashboardService dashboard) : ControllerBase
         [FromBody] AdminRoleUpsertRequestDto request,
         CancellationToken cancellationToken)
     {
-        try
+        var result = await dashboard.UpdateRoleAsync(id, request, cancellationToken);
+        if (!result.Success)
         {
-            var updated = await dashboard.UpdateRoleAsync(id, request, cancellationToken);
-            return updated is null ? NotFound() : Ok(updated);
+            return this.FromOperationResultError(result, LocalizeValidationErrors);
         }
-        catch (InvalidOperationException ex)
-        {
-            return this.ProblemFromCatalog(ProblemCatalog.Admin.RolesUpdateValidation, ex.Message);
-        }
+
+        return result.Data is null ? NotFound() : Ok(result.Data);
     }
 
     [HttpDelete("roles/{id:guid}")]
@@ -212,9 +206,8 @@ public class AdminController(IAdminDashboardService dashboard) : ControllerBase
             return NotFound();
         }
 
-        var (bytes, contentType, downloadName) = file.Value;
-        var inline = contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
-        return File(bytes, contentType, downloadName, inline);
+        var inline = file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
+        return File(file.Bytes, file.ContentType, file.DownloadName, inline);
     }
 
     [HttpGet("applications")]
@@ -257,9 +250,8 @@ public class AdminController(IAdminDashboardService dashboard) : ControllerBase
             return NotFound();
         }
 
-        var (bytes, contentType, downloadName) = file.Value;
-        var inline = contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
-        return File(bytes, contentType, downloadName, inline);
+        var inline = file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
+        return File(file.Bytes, file.ContentType, file.DownloadName, inline);
     }
 
     [HttpGet("audit/logs")]
@@ -303,14 +295,21 @@ public class AdminController(IAdminDashboardService dashboard) : ControllerBase
         [FromBody] AdminContentBulkUpsertRequestDto request,
         CancellationToken cancellationToken)
     {
-        try
+        var result = await dashboard.UpsertContentLocaleAsync(request, cancellationToken);
+        if (!result.Success)
         {
-            return Ok(await dashboard.UpsertContentLocaleAsync(request, cancellationToken));
+            return this.FromOperationResultError(result, LocalizeValidationErrors);
         }
-        catch (InvalidOperationException ex)
-        {
-            return this.ProblemFromCatalog(ProblemCatalog.Admin.ContentSaveValidation, ex.Message);
-        }
+
+        return Ok(result.Data);
+    }
+
+    private IDictionary<string, string[]> LocalizeValidationErrors(IReadOnlyDictionary<string, string[]> source)
+    {
+        return source.ToDictionary(
+            x => x.Key,
+            x => x.Value.Select(v => v.StartsWith("Validation.", StringComparison.OrdinalIgnoreCase) ? textLocalizer.Get(v) : v).ToArray(),
+            StringComparer.OrdinalIgnoreCase);
     }
 
     [HttpGet("content/locales/{locale}/audit")]

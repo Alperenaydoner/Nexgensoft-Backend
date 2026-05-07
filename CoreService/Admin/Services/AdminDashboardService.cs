@@ -2,6 +2,7 @@ using CoreService.Admin.DTOs;
 using CoreService.Application.Domain.Entities;
 using CoreService.Application.Infrastructure.Repositories;
 using CoreService.Common;
+using CoreService.Common.Localization;
 using CoreService.Audit.Domain.Entities;
 using CoreService.Audit.Infrastructure.Repositories;
 using CoreService.Auth.Domain.Entities;
@@ -18,7 +19,8 @@ public class AdminDashboardService(
     IContactRepository contacts,
     IApplicationRepository applications,
     ISiteContentRepository siteContent,
-    IHttpRequestLogRepository httpLogs) : IAdminDashboardService
+    IHttpRequestLogRepository httpLogs,
+    IApiTextLocalizer loc) : IAdminDashboardService
 {
     public async Task<AdminStatsDto> GetStatsAsync(CancellationToken cancellationToken = default)
     {
@@ -115,24 +117,24 @@ public class AdminDashboardService(
         return new AdminRoleOptionsDto { Items = items };
     }
 
-    public async Task<AdminUserDetailDto> CreateUserAsync(AdminUserUpsertRequestDto request, CancellationToken cancellationToken = default)
+    public async Task<OperationResult<AdminUserDetailDto>> CreateUserAsync(AdminUserUpsertRequestDto request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
         var email = request.Email?.Trim() ?? string.Empty;
         var normalizedEmail = email.ToUpperInvariant();
         if (string.IsNullOrWhiteSpace(email))
         {
-            throw new InvalidOperationException("Email is required.");
+            return OperationResult<AdminUserDetailDto>.Validation(CreateValidation("email", "Validation.Admin.Users.EmailRequired"));
         }
 
         if (await users.AnyUserWithNormalizedEmailAsync(normalizedEmail, cancellationToken).ConfigureAwait(false))
         {
-            throw new InvalidOperationException("Email already exists.");
+            return OperationResult<AdminUserDetailDto>.Validation(CreateValidation("email", "Validation.Admin.Users.EmailAlreadyExists"));
         }
 
         if (string.IsNullOrWhiteSpace(request.Password))
         {
-            throw new InvalidOperationException("Password is required.");
+            return OperationResult<AdminUserDetailDto>.Validation(CreateValidation("password", "Validation.Admin.Users.PasswordRequired"));
         }
 
         var user = new AppUser
@@ -146,23 +148,24 @@ public class AdminDashboardService(
             CreatedAtUtc = DateTime.UtcNow,
         };
         var created = await users.CreateUserAsync(user, request.Roles ?? Array.Empty<string>(), cancellationToken).ConfigureAwait(false);
-        return await BuildUserDetailDtoAsync(created.Id, cancellationToken).ConfigureAwait(false);
+        var dto = await BuildUserDetailDtoAsync(created.Id, cancellationToken).ConfigureAwait(false);
+        return OperationResult<AdminUserDetailDto>.Ok(dto);
     }
 
-    public async Task<AdminUserDetailDto?> UpdateUserAsync(Guid id, AdminUserUpsertRequestDto request, CancellationToken cancellationToken = default)
+    public async Task<OperationResult<AdminUserDetailDto?>> UpdateUserAsync(Guid id, AdminUserUpsertRequestDto request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
         var email = request.Email?.Trim() ?? string.Empty;
         var normalizedEmail = email.ToUpperInvariant();
         if (string.IsNullOrWhiteSpace(email))
         {
-            throw new InvalidOperationException("Email is required.");
+            return OperationResult<AdminUserDetailDto?>.Validation(CreateValidation("email", "Validation.Admin.Users.EmailRequired"));
         }
 
         var existingByEmail = await users.GetByNormalizedEmailWithRolesAsync(normalizedEmail, cancellationToken).ConfigureAwait(false);
         if (existingByEmail is not null && existingByEmail.Id != id)
         {
-            throw new InvalidOperationException("Email already exists.");
+            return OperationResult<AdminUserDetailDto?>.Validation(CreateValidation("email", "Validation.Admin.Users.EmailAlreadyExists"));
         }
 
         var updated = await users.UpdateUserAsync(
@@ -175,10 +178,11 @@ public class AdminDashboardService(
             cancellationToken).ConfigureAwait(false);
         if (updated is null)
         {
-            return null;
+            return OperationResult<AdminUserDetailDto?>.Ok(null);
         }
 
-        return await BuildUserDetailDtoAsync(updated.Id, cancellationToken).ConfigureAwait(false);
+        var dto = await BuildUserDetailDtoAsync(updated.Id, cancellationToken).ConfigureAwait(false);
+        return OperationResult<AdminUserDetailDto?>.Ok(dto);
     }
 
     public Task<bool> DeleteUserAsync(Guid id, CancellationToken cancellationToken = default) =>
@@ -187,19 +191,19 @@ public class AdminDashboardService(
     public Task<int> DeleteUsersAsync(IReadOnlyList<Guid> ids, CancellationToken cancellationToken = default) =>
         users.DeleteUsersAsync(ids, cancellationToken);
 
-    public async Task<AdminRoleListItemDto> CreateRoleAsync(AdminRoleUpsertRequestDto request, CancellationToken cancellationToken = default)
+    public async Task<OperationResult<AdminRoleListItemDto>> CreateRoleAsync(AdminRoleUpsertRequestDto request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
         var name = request.Name?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(name))
         {
-            throw new InvalidOperationException("Role name is required.");
+            return OperationResult<AdminRoleListItemDto>.Validation(CreateValidation("name", "Validation.Admin.Roles.NameRequired"));
         }
 
         var normalizedName = name.ToUpperInvariant();
         if (await users.AnyRoleWithNormalizedNameAsync(normalizedName, cancellationToken).ConfigureAwait(false))
         {
-            throw new InvalidOperationException("Role already exists.");
+            return OperationResult<AdminRoleListItemDto>.Validation(CreateValidation("name", "Validation.Admin.Roles.AlreadyExists"));
         }
 
         var role = await users.CreateRoleAsync(new AppRole
@@ -208,38 +212,39 @@ public class AdminDashboardService(
             Name = name,
             NormalizedName = normalizedName,
         }, cancellationToken).ConfigureAwait(false);
-        return new AdminRoleListItemDto { Id = role.Id, Name = role.Name, NormalizedName = role.NormalizedName, UserCount = 0 };
+        return OperationResult<AdminRoleListItemDto>.Ok(
+            new AdminRoleListItemDto { Id = role.Id, Name = role.Name, NormalizedName = role.NormalizedName, UserCount = 0 });
     }
 
-    public async Task<AdminRoleListItemDto?> UpdateRoleAsync(Guid id, AdminRoleUpsertRequestDto request, CancellationToken cancellationToken = default)
+    public async Task<OperationResult<AdminRoleListItemDto?>> UpdateRoleAsync(Guid id, AdminRoleUpsertRequestDto request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
         var name = request.Name?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(name))
         {
-            throw new InvalidOperationException("Role name is required.");
+            return OperationResult<AdminRoleListItemDto?>.Validation(CreateValidation("name", "Validation.Admin.Roles.NameRequired"));
         }
 
         var normalizedName = name.ToUpperInvariant();
         var existing = await users.GetRoleByNormalizedNameAsync(normalizedName, cancellationToken).ConfigureAwait(false);
         if (existing is not null && existing.Id != id)
         {
-            throw new InvalidOperationException("Role already exists.");
+            return OperationResult<AdminRoleListItemDto?>.Validation(CreateValidation("name", "Validation.Admin.Roles.AlreadyExists"));
         }
 
         var role = await users.UpdateRoleAsync(id, name, cancellationToken).ConfigureAwait(false);
         if (role is null)
         {
-            return null;
+            return OperationResult<AdminRoleListItemDto?>.Ok(null);
         }
 
-        return new AdminRoleListItemDto
+        return OperationResult<AdminRoleListItemDto?>.Ok(new AdminRoleListItemDto
         {
             Id = role.Id,
             Name = role.Name,
             NormalizedName = role.NormalizedName,
             UserCount = role.UserRoles.Count,
-        };
+        });
     }
 
     public Task<bool> DeleteRoleAsync(Guid id, CancellationToken cancellationToken = default) =>
@@ -294,7 +299,7 @@ public class AdminDashboardService(
         };
     }
 
-    public async Task<(byte[] Bytes, string ContentType, string DownloadName)?> GetContactAttachmentFileAsync(
+    public async Task<AdminAttachmentFileDto?> GetContactAttachmentFileAsync(
         Guid messageId,
         Guid attachmentId,
         CancellationToken cancellationToken = default)
@@ -315,7 +320,10 @@ public class AdminDashboardService(
             return null;
         }
 
-        return (bytes, string.IsNullOrWhiteSpace(att.ContentType) ? "application/octet-stream" : att.ContentType, att.OriginalFileName);
+        return new AdminAttachmentFileDto(
+            bytes,
+            string.IsNullOrWhiteSpace(att.ContentType) ? "application/octet-stream" : att.ContentType,
+            att.OriginalFileName);
     }
 
     public async Task<PagedResult<AdminJobApplicationListItemDto>> GetJobApplicationsAsync(
@@ -370,7 +378,7 @@ public class AdminDashboardService(
         };
     }
 
-    public async Task<(byte[] Bytes, string ContentType, string DownloadName)?> GetJobApplicationAttachmentFileAsync(
+    public async Task<AdminAttachmentFileDto?> GetJobApplicationAttachmentFileAsync(
         Guid applicationId,
         Guid attachmentId,
         CancellationToken cancellationToken = default)
@@ -391,7 +399,10 @@ public class AdminDashboardService(
             return null;
         }
 
-        return (bytes, string.IsNullOrWhiteSpace(att.ContentType) ? "application/octet-stream" : att.ContentType, att.OriginalFileName);
+        return new AdminAttachmentFileDto(
+            bytes,
+            string.IsNullOrWhiteSpace(att.ContentType) ? "application/octet-stream" : att.ContentType,
+            att.OriginalFileName);
     }
 
     public async Task<PagedResult<AdminHttpRequestLogListItemDto>> GetHttpRequestLogsAsync(
@@ -488,7 +499,7 @@ public class AdminDashboardService(
         var normalized = (locale ?? string.Empty).Trim().ToLowerInvariant();
         if (string.IsNullOrWhiteSpace(normalized))
         {
-            throw new InvalidOperationException("Locale is required.");
+            throw new InvalidOperationException(loc.Get("Validation.Admin.Content.LocaleRequired"));
         }
         var items = await siteContent.GetLocalizedStringsByLocaleAsync(normalized, cancellationToken).ConfigureAwait(false);
         return new AdminContentLocaleDetailDto
@@ -501,7 +512,7 @@ public class AdminDashboardService(
         };
     }
 
-    public async Task<AdminContentLocaleDetailDto> UpsertContentLocaleAsync(
+    public async Task<OperationResult<AdminContentLocaleDetailDto>> UpsertContentLocaleAsync(
         AdminContentBulkUpsertRequestDto request,
         CancellationToken cancellationToken = default)
     {
@@ -509,7 +520,7 @@ public class AdminDashboardService(
         var locale = request.Locale?.Trim().ToLowerInvariant() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(locale))
         {
-            throw new InvalidOperationException("Locale is required.");
+            return OperationResult<AdminContentLocaleDetailDto>.Validation(CreateValidation("locale", "Validation.Admin.Content.LocaleRequired"));
         }
 
         var normalizedItems = (request.Items ?? Array.Empty<AdminContentStringRowDto>())
@@ -527,7 +538,8 @@ public class AdminDashboardService(
             .ToList();
         if (duplicateKeys.Count > 0)
         {
-            throw new InvalidOperationException($"Duplicate keys: {string.Join(", ", duplicateKeys.Take(5))}");
+            return OperationResult<AdminContentLocaleDetailDto>.Validation(
+                CreateValidation("items", $"{loc.Get("Validation.Admin.Content.DuplicateKeysPrefix")} {string.Join(", ", duplicateKeys.Take(5))}"));
         }
 
         var rows = normalizedItems
@@ -539,7 +551,8 @@ public class AdminDashboardService(
             })
             .ToList();
         await siteContent.UpsertLocalizedStringsAsync(locale, rows, cancellationToken).ConfigureAwait(false);
-        return await GetContentLocaleDetailAsync(locale, cancellationToken).ConfigureAwait(false);
+        var dto = await GetContentLocaleDetailAsync(locale, cancellationToken).ConfigureAwait(false);
+        return OperationResult<AdminContentLocaleDetailDto>.Ok(dto);
     }
 
     public async Task<IReadOnlyList<AdminContentAuditRowDto>> GetRecentContentAuditAsync(
@@ -629,4 +642,10 @@ public class AdminDashboardService(
             NormalizedEmail = user.NormalizedEmail,
         };
     }
+
+    private static IReadOnlyDictionary<string, string[]> CreateValidation(string key, string message) =>
+        new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+        {
+            [key] = [message],
+        };
 }

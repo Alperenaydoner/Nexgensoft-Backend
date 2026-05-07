@@ -2,15 +2,18 @@ using CoreService.Contact.Domain.Entities;
 using CoreService.Contact.DTOs;
 using CoreService.Contact.DTOs.Requests;
 using CoreService.Contact.Infrastructure.Repositories;
+using CoreService.Common;
+using CoreService.Infrastructure.Persistence;
 using Microsoft.Extensions.Options;
 
 namespace CoreService.Contact.Services;
 
 public class ContactService(
     IContactRepository repository,
+    IUnitOfWork unitOfWork,
     IOptions<ContactUploadOptions> uploadOptions) : IContactService
 {
-    public async Task<(Guid? MessageId, IDictionary<string, string[]>? ValidationErrors)> SubmitAsync(
+    public async Task<OperationResult<Guid>> SubmitAsync(
         ContactSubmitRequest request,
         CancellationToken cancellationToken = default)
     {
@@ -18,7 +21,7 @@ public class ContactService(
         var (attachments, errors) = TryBuildAttachments(request.Attachments, options);
         if (errors is not null)
         {
-            return (null, errors);
+            return OperationResult<Guid>.Validation(errors);
         }
 
         var message = new ContactMessage
@@ -37,7 +40,8 @@ public class ContactService(
         }
 
         await repository.AddMessageWithAttachmentsAsync(message, attachments, cancellationToken);
-        return (message.Id, null);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return OperationResult<Guid>.Ok(message.Id);
     }
 
     private static (List<ContactAttachment> Attachments, Dictionary<string, string[]>? Errors) TryBuildAttachments(

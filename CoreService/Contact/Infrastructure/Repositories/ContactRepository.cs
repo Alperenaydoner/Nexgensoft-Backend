@@ -6,7 +6,7 @@ namespace CoreService.Contact.Infrastructure.Repositories;
 
 public class ContactRepository(AppDbContext db) : IContactRepository
 {
-    public async Task AddMessageWithAttachmentsAsync(
+    public Task AddMessageWithAttachmentsAsync(
         ContactMessage message,
         IReadOnlyList<ContactAttachment> attachments,
         CancellationToken cancellationToken = default)
@@ -17,7 +17,7 @@ public class ContactRepository(AppDbContext db) : IContactRepository
             db.ContactAttachments.AddRange(attachments);
         }
 
-        await db.SaveChangesAsync(cancellationToken);
+        return Task.CompletedTask;
     }
 
     public Task<int> CountMessagesAsync(CancellationToken cancellationToken = default) =>
@@ -62,7 +62,8 @@ public class ContactRepository(AppDbContext db) : IContactRepository
 
         if (toUtc.HasValue)
         {
-            q = q.Where(m => m.CreatedAtUtc <= toUtc.Value);
+            var toUpper = NormalizeToUpperExclusive(toUtc.Value);
+            q = q.Where(m => m.CreatedAtUtc < toUpper);
         }
 
         var asc = string.Equals(sortDir, "asc", StringComparison.OrdinalIgnoreCase);
@@ -92,4 +93,11 @@ public class ContactRepository(AppDbContext db) : IContactRepository
     public Task<ContactAttachment?> GetAttachmentByIdAsync(Guid attachmentId, CancellationToken cancellationToken = default) =>
         db.ContactAttachments.AsNoTracking()
             .FirstOrDefaultAsync(a => a.Id == attachmentId, cancellationToken);
+
+    private static DateTime NormalizeToUpperExclusive(DateTime value)
+    {
+        return value.Second == 0 && value.Millisecond == 0
+            ? value.AddMinutes(1)
+            : value.AddTicks(1);
+    }
 }

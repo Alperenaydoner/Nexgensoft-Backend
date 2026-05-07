@@ -30,5 +30,7 @@ public class JobApplicationAttachmentConfiguration : IEntityTypeConfiguration<Jo
 
         builder.HasIndex(x => new { x.IsActive, x.IsDeleted });
         builder.HasIndex(x => x.UserId);
+        builder.HasIndex(x => x.JobApplicationId);
+        builder.HasIndex(x => new { x.JobApplicationId, x.CreatedAtUtc });
     }
 }

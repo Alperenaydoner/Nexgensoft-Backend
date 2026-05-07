@@ -50,7 +50,8 @@ public class HttpRequestLogRepository(AppDbContext db) : IHttpRequestLogReposito
 
         if (toUtc is { } t)
         {
-            q = q.Where(x => x.OccurredAtUtc <= t);
+            var toUpper = NormalizeToUpperExclusive(t);
+            q = q.Where(x => x.OccurredAtUtc < toUpper);
         }
 
         var total = await q.CountAsync(cancellationToken).ConfigureAwait(false);
@@ -65,4 +66,11 @@ public class HttpRequestLogRepository(AppDbContext db) : IHttpRequestLogReposito
 
     public Task<HttpRequestLog?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         db.HttpRequestLogs.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+
+    private static DateTime NormalizeToUpperExclusive(DateTime value)
+    {
+        return value.Second == 0 && value.Millisecond == 0
+            ? value.AddMinutes(1)
+            : value.AddTicks(1);
+    }
 }

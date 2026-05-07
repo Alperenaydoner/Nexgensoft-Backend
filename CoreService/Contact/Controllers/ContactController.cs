@@ -30,12 +30,7 @@ public class ContactController(IContactService contactService) : ControllerBase
             return ValidationProblem(ModelState);
         }
 
-        var (messageId, validationErrors) = await contactService.SubmitAsync(body, cancellationToken);
-        if (validationErrors is not null)
-        {
-            return ValidationProblem(new ValidationProblemDetails(validationErrors));
-        }
-
-        return Ok(ApiResult<Guid>.Ok(messageId!.Value));
+        var result = await contactService.SubmitAsync(body, cancellationToken);
+        return this.FromOperationResult(result);
     }
 }

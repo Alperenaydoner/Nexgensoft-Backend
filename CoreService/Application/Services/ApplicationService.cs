@@ -3,7 +3,9 @@ using CoreService.Application.DTOs;
 using CoreService.Application.DTOs.Requests;
 using CoreService.Application.DTOs.Responses;
 using CoreService.Application.Infrastructure.Repositories;
+using CoreService.Common;
 using CoreService.Common.Validation;
+using CoreService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -11,6 +13,7 @@ namespace CoreService.Application.Services;
 
 public class ApplicationService(
     IApplicationRepository repository,
+    IUnitOfWork unitOfWork,
     IOptions<ApplicationUploadOptions> uploadOptions) : IApplicationService
 {
     public async Task<IReadOnlyList<string>> GetPositionOptionsAsync(CancellationToken cancellationToken = default)
@@ -38,26 +41,26 @@ public class ApplicationService(
         };
     }
 
-    public async Task<(Guid? ApplicationId, IDictionary<string, string[]>? ValidationErrors)> SubmitAsync(
+    public async Task<OperationResult<Guid>> SubmitAsync(
         ApplicationSubmitRequest request,
         CancellationToken cancellationToken = default)
     {
         var qualityErrors = ApplicantContentValidationHelper.ValidateFullNameAndEmail(request.FullName, request.Email);
         if (qualityErrors is not null)
         {
-            return (null, qualityErrors);
+            return OperationResult<Guid>.Validation(qualityErrors);
         }
 
         var options = uploadOptions.Value;
         var (attachments, errors) = TryBuildAttachments(request.Attachments, options);
         if (errors is not null)
         {
-            return (null, errors);
+            return OperationResult<Guid>.Validation(errors);
         }
 
         if (attachments.Count < options.MinFilesPerApplication)
         {
-            return (null, new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+            return OperationResult<Guid>.Validation(new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
             {
                 ["attachments"] = ["Validation.Application.AttachmentsMinCount"],
             });
@@ -80,10 +83,11 @@ public class ApplicationService(
         }
 
         await repository.AddApplicationWithAttachmentsAsync(application, attachments, cancellationToken);
-        return (application.Id, null);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return OperationResult<Guid>.Ok(application.Id);
     }
 
-    public async Task<(Guid? ApplicationId, IDictionary<string, string[]>? ValidationErrors)> UpdateByCodeAsync(
+    public async Task<OperationResult<Guid>> UpdateByCodeAsync(
         Guid applicationCode,
         ApplicationUpdateByCodeRequest request,
         CancellationToken cancellationToken = default)
@@ -91,7 +95,7 @@ public class ApplicationService(
         var application = await repository.GetApplicationByIdForUpdateAsync(applicationCode, cancellationToken);
         if (application is null)
         {
-            return (null, new Dictionary<string, string[]>
+            return OperationResult<Guid>.Validation(new Dictionary<string, string[]>
             {
                 ["applicationCode"] = ["Validation.Application.NotFound"],
             });
@@ -146,12 +150,12 @@ public class ApplicationService(
         var (attachments, buildErrors) = TryBuildAttachments(request.Attachments, options);
         if (buildErrors is not null)
         {
-            return (null, buildErrors);
+            return OperationResult<Guid>.Validation(buildErrors);
         }
 
         if (string.IsNullOrWhiteSpace(application.CoverLetter))
         {
-            return (null, new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+            return OperationResult<Guid>.Validation(new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
             {
                 ["coverLetter"] = ["Validation.Application.CoverLetterRequired"],
             });
@@ -159,7 +163,7 @@ public class ApplicationService(
 
         if (application.CoverLetter.Length < 10)
         {
-            return (null, new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+            return OperationResult<Guid>.Validation(new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
             {
                 ["coverLetter"] = ["Validation.Application.CoverLetterMinLength"],
             });
@@ -167,7 +171,7 @@ public class ApplicationService(
 
         if (string.IsNullOrWhiteSpace(application.Position))
         {
-            return (null, new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+            return OperationResult<Guid>.Validation(new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
             {
                 ["position"] = ["Validation.Application.PositionRequired"],
             });
@@ -176,7 +180,7 @@ public class ApplicationService(
         var updateQualityErrors = ApplicantContentValidationHelper.ValidateFullNameAndEmail(application.FullName, application.Email);
         if (updateQualityErrors is not null)
         {
-            return (null, updateQualityErrors);
+            return OperationResult<Guid>.Validation(updateQualityErrors);
         }
 
         foreach (var attachment in attachments)
@@ -187,16 +191,16 @@ public class ApplicationService(
         repository.AddAttachments(attachments);
         try
         {
-            await repository.SaveChangesAsync(cancellationToken);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
         }
         catch (DbUpdateConcurrencyException)
         {
-            return (null, new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+            return OperationResult<Guid>.Validation(new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
             {
                 ["applicationCode"] = ["Validation.Application.NotFound"],
             });
         }
-        return (application.Id, null);
+        return OperationResult<Guid>.Ok(application.Id);
     }
 
     private static (List<JobApplicationAttachment> Attachments, Dictionary<string, string[]>? Errors) TryBuildAttachments(

@@ -6,7 +6,7 @@ namespace CoreService.Application.Infrastructure.Repositories;
 
 public class ApplicationRepository(AppDbContext db) : IApplicationRepository
 {
-    public async Task AddApplicationWithAttachmentsAsync(
+    public Task AddApplicationWithAttachmentsAsync(
         JobApplication application,
         IReadOnlyList<JobApplicationAttachment> attachments,
         CancellationToken cancellationToken = default)
@@ -17,7 +17,7 @@ public class ApplicationRepository(AppDbContext db) : IApplicationRepository
             db.JobApplicationAttachments.AddRange(attachments);
         }
 
-        await db.SaveChangesAsync(cancellationToken);
+        return Task.CompletedTask;
     }
 
     public Task<int> CountApplicationsAsync(CancellationToken cancellationToken = default) =>
@@ -70,7 +70,8 @@ public class ApplicationRepository(AppDbContext db) : IApplicationRepository
 
         if (toUtc.HasValue)
         {
-            q = q.Where(a => a.CreatedAtUtc <= toUtc.Value);
+            var toUpper = NormalizeToUpperExclusive(toUtc.Value);
+            q = q.Where(a => a.CreatedAtUtc < toUpper);
         }
 
         var asc = string.Equals(sortDir, "asc", StringComparison.OrdinalIgnoreCase);
@@ -146,9 +147,6 @@ public class ApplicationRepository(AppDbContext db) : IApplicationRepository
         db.JobApplicationAttachments.AddRange(attachments);
     }
 
-    public Task SaveChangesAsync(CancellationToken cancellationToken = default) =>
-        db.SaveChangesAsync(cancellationToken);
-
     public Task<JobApplicationAttachment?> GetAttachmentByIdAsync(Guid attachmentId, CancellationToken cancellationToken = default) =>
         db.JobApplicationAttachments.AsNoTracking()
             .FirstOrDefaultAsync(a => a.Id == attachmentId, cancellationToken);
@@ -161,4 +159,12 @@ public class ApplicationRepository(AppDbContext db) : IApplicationRepository
             .ThenBy(x => x.Name)
             .Select(x => x.Name)
             .ToListAsync(cancellationToken);
+
+    private static DateTime NormalizeToUpperExclusive(DateTime value)
+    {
+        // datetime-local inputs are minute precision; include full selected minute.
+        return value.Second == 0 && value.Millisecond == 0
+            ? value.AddMinutes(1)
+            : value.AddTicks(1);
+    }
 }

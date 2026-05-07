@@ -16,6 +16,7 @@ public static class PersistenceExtensions
 
         services.AddDbContext<AppDbContext>(options =>
             options.UseNpgsql(connectionString));
+        services.AddScoped<IUnitOfWork, EfUnitOfWork>();
 
         return services;
     }

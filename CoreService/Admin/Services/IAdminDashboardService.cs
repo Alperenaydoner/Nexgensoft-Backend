@@ -29,17 +29,17 @@ public interface IAdminDashboardService
 
     Task<AdminRoleOptionsDto> GetRoleOptionsAsync(CancellationToken cancellationToken = default);
 
-    Task<AdminUserDetailDto> CreateUserAsync(AdminUserUpsertRequestDto request, CancellationToken cancellationToken = default);
+    Task<OperationResult<AdminUserDetailDto>> CreateUserAsync(AdminUserUpsertRequestDto request, CancellationToken cancellationToken = default);
 
-    Task<AdminUserDetailDto?> UpdateUserAsync(Guid id, AdminUserUpsertRequestDto request, CancellationToken cancellationToken = default);
+    Task<OperationResult<AdminUserDetailDto?>> UpdateUserAsync(Guid id, AdminUserUpsertRequestDto request, CancellationToken cancellationToken = default);
 
     Task<bool> DeleteUserAsync(Guid id, CancellationToken cancellationToken = default);
 
     Task<int> DeleteUsersAsync(IReadOnlyList<Guid> ids, CancellationToken cancellationToken = default);
 
-    Task<AdminRoleListItemDto> CreateRoleAsync(AdminRoleUpsertRequestDto request, CancellationToken cancellationToken = default);
+    Task<OperationResult<AdminRoleListItemDto>> CreateRoleAsync(AdminRoleUpsertRequestDto request, CancellationToken cancellationToken = default);
 
-    Task<AdminRoleListItemDto?> UpdateRoleAsync(Guid id, AdminRoleUpsertRequestDto request, CancellationToken cancellationToken = default);
+    Task<OperationResult<AdminRoleListItemDto?>> UpdateRoleAsync(Guid id, AdminRoleUpsertRequestDto request, CancellationToken cancellationToken = default);
 
     Task<bool> DeleteRoleAsync(Guid id, CancellationToken cancellationToken = default);
 
@@ -56,7 +56,7 @@ public interface IAdminDashboardService
 
     Task<AdminContactMessageDetailDto?> GetContactMessageDetailAsync(Guid id, CancellationToken cancellationToken = default);
 
-    Task<(byte[] Bytes, string ContentType, string DownloadName)?> GetContactAttachmentFileAsync(
+    Task<AdminAttachmentFileDto?> GetContactAttachmentFileAsync(
         Guid messageId,
         Guid attachmentId,
         CancellationToken cancellationToken = default);
@@ -75,7 +75,7 @@ public interface IAdminDashboardService
 
     Task<AdminJobApplicationDetailDto?> GetJobApplicationDetailAsync(Guid id, CancellationToken cancellationToken = default);
 
-    Task<(byte[] Bytes, string ContentType, string DownloadName)?> GetJobApplicationAttachmentFileAsync(
+    Task<AdminAttachmentFileDto?> GetJobApplicationAttachmentFileAsync(
         Guid applicationId,
         Guid attachmentId,
         CancellationToken cancellationToken = default);
@@ -96,7 +96,7 @@ public interface IAdminDashboardService
 
     Task<AdminContentLocaleDetailDto> GetContentLocaleDetailAsync(string locale, CancellationToken cancellationToken = default);
 
-    Task<AdminContentLocaleDetailDto> UpsertContentLocaleAsync(
+    Task<OperationResult<AdminContentLocaleDetailDto>> UpsertContentLocaleAsync(
         AdminContentBulkUpsertRequestDto request,
         CancellationToken cancellationToken = default);
 

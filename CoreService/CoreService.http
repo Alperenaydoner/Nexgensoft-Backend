@@ -41,15 +41,43 @@ Accept-Language: en
 
 ###############################################################################
 ### Contact — doğrulama hatası (geçersiz e-posta) → 400 + problem+json
+### Beklenen: errors.email[0] içinde "geçerli e-posta" mesajı
 POST {{host}}/api/v1/contact
 Content-Type: application/json
 Accept-Language: tr
 
 {
-  "fullName": "Test",
+  "fullName": "Test Kullanici",
   "email": "not-an-email",
-  "company": "",
-  "message": "Mesaj içeriği en az on karakter olmalıdır burada."
+  "company": "Nexgensoft",
+  "message": "Bu istek bilincli olarak gecersiz e-posta testidir; 400 donmesi beklenir."
+}
+
+###############################################################################
+### Contact — doğrulama hatası (çok kısa mesaj) → 400 + problem+json
+### Beklenen: errors.message[0] içinde "en az 10 karakter" mesajı
+POST {{host}}/api/v1/contact
+Content-Type: application/json
+Accept-Language: tr
+
+{
+  "fullName": "Kisa Mesaj Testi",
+  "email": "kisa.mesaj@example.com",
+  "company": "Nexgensoft",
+  "message": "kisa"
+}
+
+###############################################################################
+### Contact — aynı payload'un valid hali → 200 + ApiResult<guid>
+POST {{host}}/api/v1/contact
+Content-Type: application/json
+Accept-Language: tr
+
+{
+  "fullName": "Kisa Mesaj Testi",
+  "email": "kisa.mesaj@example.com",
+  "company": "Nexgensoft",
+  "message": "Bu metin dogrulama kurallarina uygun gecerli bir test mesajidir."
 }
 
 ###############################################################################

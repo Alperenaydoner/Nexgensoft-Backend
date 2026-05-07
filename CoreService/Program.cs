@@ -4,6 +4,7 @@ using CoreService.Audit;
 using CoreService.Auth;
 using CoreService.Auth.Services;
 using CoreService.Common;
+using CoreService.Common.Architecture;
 using CoreService.Common.Localization;
 using CoreService.Contact;
 using CoreService.Content;
@@ -15,6 +16,12 @@ using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using System.Threading.RateLimiting;
+
+if (args.Contains("--contract-check", StringComparer.OrdinalIgnoreCase))
+{
+    ServiceContractGuard.ValidateNoTupleReturns(typeof(Program).Assembly);
+    return;
+}
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -79,6 +86,8 @@ builder.Services.AddApplicationFeature(builder.Configuration);
 builder.Services.AddContentFeature();
 builder.Services.AddAdminFeature();
 builder.Services.AddSingleton<IApiTextLocalizer, JsonApiTextLocalizer>();
+
+ServiceContractGuard.ValidateNoTupleReturns(typeof(Program).Assembly);
 
 builder.Services.AddRateLimiter(options =>
 {

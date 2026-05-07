@@ -30,5 +30,7 @@ public class ContactAttachmentConfiguration : IEntityTypeConfiguration<ContactAt
 
         builder.HasIndex(x => new { x.IsActive, x.IsDeleted });
         builder.HasIndex(x => x.UserId);
+        builder.HasIndex(x => x.ContactMessageId);
+        builder.HasIndex(x => new { x.ContactMessageId, x.CreatedAtUtc });
     }
 }

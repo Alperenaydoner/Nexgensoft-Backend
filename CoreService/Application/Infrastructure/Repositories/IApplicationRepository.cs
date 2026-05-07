@@ -40,8 +40,6 @@ public interface IApplicationRepository
 
     void AddAttachments(IReadOnlyList<JobApplicationAttachment> attachments);
 
-    Task SaveChangesAsync(CancellationToken cancellationToken = default);
-
     Task<JobApplicationAttachment?> GetAttachmentByIdAsync(Guid attachmentId, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<string>> GetActivePositionNamesAsync(CancellationToken cancellationToken = default);

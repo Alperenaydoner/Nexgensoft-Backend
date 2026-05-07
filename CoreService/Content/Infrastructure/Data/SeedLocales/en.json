@@ -131,6 +131,21 @@
       "AttachmentExtensionNotAllowed": "This file type is not allowed.",
       "AttachmentInvalidPayload": "Invalid file payload.",
       "AttachmentTooLarge": "A file exceeds the maximum allowed size."
+    },
+    "Admin": {
+      "Users": {
+        "EmailRequired": "Email is required.",
+        "EmailAlreadyExists": "This email is already in use.",
+        "PasswordRequired": "Password is required."
+      },
+      "Roles": {
+        "NameRequired": "Role name is required.",
+        "AlreadyExists": "This role already exists."
+      },
+      "Content": {
+        "LocaleRequired": "Locale is required.",
+        "DuplicateKeysPrefix": "Duplicate keys:"
+      }
     }
   },
   "admin": {
