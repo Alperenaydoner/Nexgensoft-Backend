@@ -98,27 +98,47 @@ public class ApplicationService(
 
         if (!string.IsNullOrWhiteSpace(request.FullName))
         {
-            application.FullName = request.FullName.Trim();
+            var nextFullName = request.FullName.Trim();
+            if (!string.Equals(application.FullName, nextFullName, StringComparison.Ordinal))
+            {
+                application.FullName = nextFullName;
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(request.Email))
         {
-            application.Email = request.Email.Trim();
+            var nextEmail = request.Email.Trim();
+            if (!string.Equals(application.Email, nextEmail, StringComparison.Ordinal))
+            {
+                application.Email = nextEmail;
+            }
         }
 
         if (request.Phone is not null)
         {
-            application.Phone = string.IsNullOrWhiteSpace(request.Phone) ? null : request.Phone.Trim();
+            var nextPhone = string.IsNullOrWhiteSpace(request.Phone) ? null : request.Phone.Trim();
+            if (!string.Equals(application.Phone, nextPhone, StringComparison.Ordinal))
+            {
+                application.Phone = nextPhone;
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(request.Position))
         {
-            application.Position = request.Position.Trim();
+            var nextPosition = request.Position.Trim();
+            if (!string.Equals(application.Position, nextPosition, StringComparison.Ordinal))
+            {
+                application.Position = nextPosition;
+            }
         }
 
         if (request.CoverLetter is not null)
         {
-            application.CoverLetter = string.IsNullOrWhiteSpace(request.CoverLetter) ? null : request.CoverLetter.Trim();
+            var nextCoverLetter = string.IsNullOrWhiteSpace(request.CoverLetter) ? null : request.CoverLetter.Trim();
+            if (!string.Equals(application.CoverLetter, nextCoverLetter, StringComparison.Ordinal))
+            {
+                application.CoverLetter = nextCoverLetter;
+            }
         }
 
         var options = uploadOptions.Value;
