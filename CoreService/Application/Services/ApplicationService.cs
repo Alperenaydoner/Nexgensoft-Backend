@@ -128,14 +128,6 @@ public class ApplicationService(
             return (null, buildErrors);
         }
 
-        if (attachments.Count > 0 && attachments.Count < options.MinFilesPerApplication)
-        {
-            return (null, new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["attachments"] = ["Validation.Application.AttachmentsMinCount"],
-            });
-        }
-
         if (string.IsNullOrWhiteSpace(application.CoverLetter))
         {
             return (null, new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
