@@ -4,6 +4,7 @@ using CoreService.Application.DTOs.Requests;
 using CoreService.Application.DTOs.Responses;
 using CoreService.Application.Infrastructure.Repositories;
 using CoreService.Common.Validation;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace CoreService.Application.Services;
@@ -181,10 +182,20 @@ public class ApplicationService(
         foreach (var attachment in attachments)
         {
             attachment.JobApplicationId = application.Id;
-            application.Attachments.Add(attachment);
         }
 
-        await repository.SaveChangesAsync(cancellationToken);
+        repository.AddAttachments(attachments);
+        try
+        {
+            await repository.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return (null, new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["applicationCode"] = ["Validation.Application.NotFound"],
+            });
+        }
         return (application.Id, null);
     }
 

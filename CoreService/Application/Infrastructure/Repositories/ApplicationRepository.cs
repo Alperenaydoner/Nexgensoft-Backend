@@ -136,6 +136,16 @@ public class ApplicationRepository(AppDbContext db) : IApplicationRepository
             .Include(a => a.Attachments)
             .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
 
+    public void AddAttachments(IReadOnlyList<JobApplicationAttachment> attachments)
+    {
+        if (attachments.Count == 0)
+        {
+            return;
+        }
+
+        db.JobApplicationAttachments.AddRange(attachments);
+    }
+
     public Task SaveChangesAsync(CancellationToken cancellationToken = default) =>
         db.SaveChangesAsync(cancellationToken);
 
